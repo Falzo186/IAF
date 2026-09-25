@@ -16,3 +16,6 @@ __pycache__/
 
 # Temporales de la grabación del video de respaldo
 demo/_video_tmp/
+
+# PDFs generados por reference_report.py
+reportes/

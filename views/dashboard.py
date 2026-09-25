@@ -122,3 +122,31 @@ for section, ids in SECTIONS:
         for col, bq_id in zip(cols, pair):
             with col:
                 need_card(bq_id)
+
+# --- Panel del equipo ---------------------------------------------------------------
+# SOLO para el equipo: genera el PDF de respuestas de referencia (ground truth humano, de
+# reference_answers.yaml). No forma parte del análisis ni del Asistente.
+
+st.markdown("<div class='section-title'>Equipo</div>", unsafe_allow_html=True)
+with st.expander("Panel del equipo", icon=":material/admin_panel_settings:",
+                 expanded="ref_pdf" in st.session_state):
+    import reference_report
+
+    st.caption("Herramienta interna. Genera el PDF de respuestas de referencia (redactadas por el "
+               "equipo en reference_answers.yaml) con los filtros de tienda y fechas activos. "
+               "Es la referencia humana para evaluar en el futuro al asistente; no evalúa al modelo.")
+    try:
+        pending = reference_report.unapproved(reference_report.load_answers())
+    except Exception as exc:  # YAML mal editado: se avisa sin romper el dashboard
+        pending = None
+        st.error(f"reference_answers.yaml no es válido: {exc}")
+    if pending:
+        st.warning(f"{len(pending)} de 10 respuestas de referencia están sin aprobar. "
+                   "El PDF las marcará como borrador.")
+    if pending is not None and st.button("Generar PDF de referencia", key="gen_ref_pdf"):
+        with st.spinner("Generando el PDF (unos 30 s: se exportan las 10 gráficas)…"):
+            st.session_state["ref_pdf"] = reference_report.generar_pdf_referencia(store, f_from, f_to)
+    if "ref_pdf" in st.session_state:
+        st.download_button("Descargar PDF de referencia", st.session_state["ref_pdf"],
+                           file_name=reference_report.default_filename(), mime="application/pdf",
+                           key="dl_ref_pdf", icon=":material/download:")

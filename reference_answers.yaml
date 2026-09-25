@@ -1,0 +1,145 @@
+# =====================================================================================
+#  ⚠  ATENCIÓN: ESTE ARCHIVO ES UN BORRADOR — NO ES TODAVÍA LA REFERENCIA DEL EQUIPO  ⚠
+# =====================================================================================
+#  - Cada `respuesta_referencia` la escribió Claude Code de forma DETERMINÍSTICA (sin el
+#    LLM de Ollama), usando solo cifras ya validadas en fase2.md y analytics.py, para
+#    que el equipo tenga un punto de partida auditable.
+#  - `aprobado: false` significa BORRADOR. Mientras una necesidad tenga aprobado: false,
+#    el PDF (python reference_report.py o el botón del Panel del equipo) la marca con la
+#    franja "BORRADOR — PENDIENTE DE REVISIÓN".
+#  - Para aprobar una necesidad: reescribir `respuesta_referencia` con palabras propias
+#    del equipo, llenar `autor` y `fecha_revision` (AAAA-MM-DD) y poner `aprobado: true`.
+#  - Las cifras corresponden al periodo completo con ventas (ene 2016 – mar 2018) y a
+#    todas las tiendas. Si se genera el PDF con filtros, las tablas y gráficas cambian,
+#    pero este texto NO: es la referencia para el periodo completo.
+#  - Este archivo NO se compara todavía contra el chat: eso es una fase futura.
+# =====================================================================================
+
+N1:
+  pregunta: "¿Qué productos con descuento generan más ingreso neto y cuáles ceden más ingreso por el descuento?"
+  respuesta_referencia: |
+    El producto con más ingreso neto vendido con descuento es Trek Slash 8 27.5 - 2016,
+    con $544,318.64 netos y $59,679.85 cedidos en descuentos (9.88 % del bruto); los 10
+    productos de mayor ingreso cedieron en conjunto $289,142.15. En toda la operación el
+    descuento cedido suma $775,394.82, el 10.4 % del ingreso bruto, y los modelos 2018 que
+    encabezan el ranking de % cedido se vendieron siempre al 20 %. Como no hay costos en
+    los datos, ese dinero cedido es la mejor medida disponible de la "pérdida marginal".
+    Acción sugerida: revisar la política de descuento del 20 % en los modelos 2018 y
+    limitarla en los productos de mayor ingreso, que no necesitan tanto incentivo.
+  autor: ""
+  fecha_revision: ""
+  aprobado: false
+
+N2:
+  pregunta: "¿Qué productos se venden mucho pero están a punto de agotarse en alguna tienda?"
+  respuesta_referencia: |
+    7 de los 20 productos más vendidos tienen menos de 5 unidades en al menos una tienda
+    (10 casos producto-tienda), y 3 ya están agotados: Surly Ice Cream Truck Frameset y
+    Trek Remedy 29 Carbon Frameset en Santa Cruz, y Surly Wednesday Frameset en Rowlett.
+    Son productos de alta rotación, así que cada día sin stock es venta perdida probable.
+    Acción sugerida: reabastecer primero los 3 agotados y fijar un punto de reorden para
+    los productos top, en lugar de esperar a que lleguen a cero.
+  autor: ""
+  fecha_revision: ""
+  aprobado: false
+
+N3:
+  pregunta: "¿Quiénes son nuestros mejores vendedores de bicicletas eléctricas?"
+  respuesta_referencia: |
+    Marcelene Boyer (Baldwin Bikes) lidera Electric Bikes con $271,184.17, el 37 % del
+    ingreso de la categoría, seguida muy de cerca por Venita Daniel, también de Baldwin,
+    con $261,795.84; en Rowlett la cifra más baja es la de Layla Terrell, con $28,901.90.
+    La categoría depende de dos personas de una sola tienda, lo que es un riesgo si alguna
+    de ellas se va. Acción sugerida: documentar y replicar en Santa Cruz y Rowlett la forma
+    de vender de las dos líderes de Baldwin.
+  autor: ""
+  fecha_revision: ""
+  aprobado: false
+
+N4:
+  pregunta: "¿En qué ciudades se concentran las compras hechas con el menor descuento?"
+  respuesta_referencia: |
+    No existen ventas sin descuento: el mínimo del dataset es 5 %, por lo que "premium" se
+    define como las compras con ese descuento mínimo. Floral Park, NY lidera en monto con
+    $30,858.72 y Newburgh, NY tiene la mayor proporción de su ingreso con descuento mínimo
+    (51.0 %); 9 de las 10 ciudades del top están en Nueva York. Es la clientela menos
+    sensible al precio. Acción sugerida: priorizar campañas sin descuento o de producto
+    nuevo en estas ciudades de NY.
+  autor: ""
+  fecha_revision: ""
+  aprobado: false
+
+N5:
+  pregunta: "¿Cuánto nos están costando los envíos que llegan tarde y en qué tiendas pasa más?"
+  respuesta_referencia: |
+    458 órdenes, el 31.7 % de las completadas, se enviaron después de la fecha requerida,
+    por un valor neto de $2,042,907.07 y con un retraso promedio de 1.33 días. Baldwin
+    Bikes concentra 317 de esas órdenes y el 70 % del valor ($1,430,618.99). No es un
+    costo logístico medido (no hay costos en los datos), sino el valor de las ventas
+    expuestas a un mal servicio. Acción sugerida: revisar el proceso de despacho de
+    Baldwin, donde un pequeño ajuste afecta a la mayor parte del problema.
+  autor: ""
+  fecha_revision: ""
+  aprobado: false
+
+N6:
+  pregunta: "¿Qué mercancía lleva meses en bodega sin moverse y cuánto capital tenemos ahí parado?"
+  respuesta_referencia: |
+    29 productos con stock no tuvieron ventas en los 6 meses previos a la última venta
+    (oct 2017 – mar 2018): suman 1,234 unidades y $1,891,217.66 a precio de lista, y los 29
+    nunca se han vendido; el mayor es Trek Domane SLR 6 Disc Women's - 2018 con $241,999.56.
+    No es mercancía que dejó de moverse, sino modelos 2018 que nunca arrancaron, lo que
+    apunta a una decisión de compra y no a un problema de rotación. Acción sugerida: plan
+    de liquidación para los de mayor valor y revisar el criterio de compra de modelos nuevos.
+  autor: ""
+  fecha_revision: ""
+  aprobado: false
+
+N7:
+  pregunta: "¿Qué clientes suelen combinar varias marcas en un mismo pedido?"
+  respuesta_referencia: |
+    1,064 clientes compraron 2 o más marcas en una misma orden completada, pero ninguno lo
+    hizo en más de una orden; 6 clientes llegaron a combinar 5 marcas en un solo pedido.
+    La compra multimarca es frecuente pero no recurrente: el cliente mezcla marcas una vez
+    y no vuelve a hacerlo. Acción sugerida: usar esas órdenes multimarca como base para
+    ofertas de paquete y seguimiento posventa que conviertan esa compra única en repetida.
+  autor: ""
+  fecha_revision: ""
+  aprobado: false
+
+N8:
+  pregunta: "¿Cuánto gasta en promedio un cliente por pedido en cada una de nuestras tiendas?"
+  respuesta_referencia: |
+    Rowlett Bikes tiene el ticket promedio más alto, $4,971.23 en 142 órdenes, frente a
+    $4,613.55 de Baldwin Bikes (1,019 órdenes) y $4,420.75 de Santa Cruz Bikes (284).
+    Baldwin mueve siete veces más órdenes que Rowlett con un ticket menor, así que su
+    ingreso depende del volumen y no del valor por pedido. Acción sugerida: estudiar qué
+    vende Rowlett en cada orden para aplicar venta cruzada en Baldwin.
+  autor: ""
+  fecha_revision: ""
+  aprobado: false
+
+N9:
+  pregunta: "¿Qué categorías y marcas tienen la salida más lenta del catálogo?"
+  respuesta_referencia: |
+    La categoría más lenta es Electric Bikes, con 9.69 unidades vendidas por mes con ventas,
+    frente a 69.07 de Cruisers, la más rápida; entre marcas, las más lentas son Strider
+    (4.33, con solo 3 meses con ventas), Heller (5.20) y Ritchey (5.32). Una rotación baja
+    inmoviliza espacio y capital aunque el ticket sea alto, como en las eléctricas. Acción
+    sugerida: ajustar la profundidad de inventario de estas marcas y categorías a su ritmo
+    real de venta.
+  autor: ""
+  fecha_revision: ""
+  aprobado: false
+
+N10:
+  pregunta: "¿Cuánto dinero perdimos por pedidos que al final no se concretaron?"
+  respuesta_referencia: |
+    El dataset no tiene estado "cancelada"; se usan las órdenes Rechazadas: 45 órdenes por
+    $208,579.45 netos en todo el histórico, y Rowlett Bikes acumula el mayor monto, con 19
+    órdenes y $86,018.94. Para una tienda con pocas órdenes como Rowlett, cada rechazo pesa
+    mucho sobre su resultado. Acción sugerida: identificar la causa de los rechazos en
+    Rowlett (pago, stock o crédito) antes de ampliar el análisis a las otras tiendas.
+  autor: ""
+  fecha_revision: ""
+  aprobado: false
