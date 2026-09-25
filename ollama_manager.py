@@ -143,6 +143,20 @@ def pull_model(name: str) -> Iterator[dict]:
         raise _unavailable(exc) from exc
 
 
+def loaded_models() -> list[str]:
+    """Modelos cargados en RAM ahora mismo (/api/ps)."""
+    try:
+        resp = get_client().ps()
+    except (ConnectionError, httpx.HTTPError) as exc:
+        raise _unavailable(exc) from exc
+    return sorted(m.model for m in resp.models if m.model)
+
+
+def is_model_loaded(name: str) -> bool:
+    candidates = {name} if ":" in name else {name, f"{name}:latest"}
+    return any(m in candidates for m in loaded_models())
+
+
 def unload_model(name: str) -> None:
     """Libera la RAM del modelo (generate con keep_alive=0). Se usa al cambiar de modelo."""
     try:
@@ -163,6 +177,7 @@ def chat(model: str, messages: list[dict], *, temperature: float = 0.0,
             model=model,
             messages=messages,
             options={"temperature": temperature, "num_ctx": num_ctx, "num_predict": num_predict},
+            keep_alive=config.KEEP_ALIVE,  # que el modelo no se descargue a mitad de la demo
         )
     except ollama.ResponseError as exc:
         if _is_not_found(exc):

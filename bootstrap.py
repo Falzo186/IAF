@@ -38,6 +38,7 @@ HASH_FILE = VENV_DIR / ".req_hash"
 LOGS_DIR = BASE_DIR / "logs"
 DEFAULT_PORT = 8501
 HEALTH_TIMEOUT_S = 60
+LOG_MAX_BYTES = 1_000_000
 OLLAMA_START_TIMEOUT_S = 15
 IS_WINDOWS = sys.platform == "win32"
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
@@ -53,8 +54,20 @@ class BootstrapError(Exception):
 # Utilidades
 # ---------------------------------------------------------------------------
 
+def rotate_log(path: Path, max_bytes: int = LOG_MAX_BYTES) -> bool:
+    """Si el log supera max_bytes lo renombra a <nombre>.1 (se conserva uno solo). True si rotó."""
+    try:
+        if path.stat().st_size <= max_bytes:
+            return False
+        os.replace(path, path.with_name(path.name + ".1"))
+        return True
+    except OSError:
+        return False
+
+
 def setup_logging() -> None:
     LOGS_DIR.mkdir(exist_ok=True)
+    rotate_log(LOGS_DIR / "ejecutar.log")
     for stream in (sys.stdout, sys.stderr):
         try:
             stream.reconfigure(errors="replace")
@@ -142,17 +155,26 @@ def ensure_venv(reset: bool = False) -> Path:
     if reset and VENV_DIR.exists():
         log.info("  --reset: se borra .venv")
         shutil.rmtree(VENV_DIR)
-    py = venv_python()
+    # Rutas leídas del módulo en cada llamada (no como argumentos por defecto, que se fijan al
+    # importar): así las pruebas pueden redirigirlas a una carpeta temporal.
+    py = venv_python(VENV_DIR)
     if not py.exists():
         log.info("  Creando el entorno virtual .venv (solo la primera vez)…")
         r = run([sys.executable, "-m", "venv", VENV_DIR])
         if r.returncode != 0 or not py.exists():
             raise BootstrapError("No se pudo crear el entorno virtual .venv. ¿Está completo tu Python?")
-    if needs_install():
+    if needs_install(REQUIREMENTS, HASH_FILE):
         log.info("  Instalando dependencias (la primera vez tarda unos minutos)…")
+        # Timeout y reintentos cortos: sin red, pip falla en segundos en vez de insistir ~1 min.
         r = run([py, "-m", "pip", "install", "--disable-pip-version-check", "--no-input",
-                 "-r", REQUIREMENTS])
+                 "--timeout", "10", "--retries", "1", "-r", REQUIREMENTS])
         if r.returncode != 0:
+            if HASH_FILE.exists():
+                # requirements.txt cambió pero no hay red: se sigue con lo ya instalado y se
+                # reintenta en el próximo arranque (no se actualiza el hash).
+                log.info("  AVISO: no se pudieron actualizar las dependencias (¿sin conexión?). "
+                         "Se continúa con las ya instaladas.")
+                return py
             raise BootstrapError("Falló la instalación de dependencias. Revisa tu conexión a internet "
                                  "y vuelve a intentarlo (o usa --reset).")
         HASH_FILE.write_text(file_hash(REQUIREMENTS), encoding="utf-8")
@@ -299,6 +321,28 @@ def pull_in_background(py_for_helper: str, model: str) -> None:
     subprocess.Popen([py_for_helper, str(BASE_DIR / "bootstrap.py"), "--_pull", model], **kwargs)
     log.info(f"  Descargando {model} en segundo plano (~1 GB). Progreso: logs/{logfile.name}. "
              "La app arranca sin esperar.")
+
+
+def start_warm_up(py: Path, model: str) -> bool:
+    """Lanza warmup.py con el Python del venv, sin esperar. False si no corresponde.
+
+    Solo si el modelo ya está descargado y no hay una descarga en curso: carga el modelo en
+    RAM y deja en caché el system prompt, para que la primera pregunta de la demo sea rápida.
+    """
+    sys.path.insert(0, str(BASE_DIR))
+    import pull_log
+    host = read_config()["OLLAMA_HOST"]
+    if pull_log.progress(model, LOGS_DIR) is not None or not model_available(host, model):
+        return False
+    kwargs = {"stdin": subprocess.DEVNULL, "stderr": subprocess.STDOUT, "cwd": BASE_DIR}
+    if IS_WINDOWS:
+        kwargs["creationflags"] = NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        kwargs["start_new_session"] = True
+    out = open(LOGS_DIR / "warmup.log", "w", encoding="utf-8")
+    subprocess.Popen([str(py), str(BASE_DIR / "warmup.py"), model], stdout=out, **kwargs)
+    log.info(f"  Precalentando {model} en segundo plano (~20 s; el Asistente muestra ◐ cargando…).")
+    return True
 
 
 def pull_worker(model: str) -> int:
@@ -483,6 +527,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.smoke:
             log.info("  --smoke: comprobación correcta; se cierra la app.")
             return 0
+        if ai_enabled:
+            start_warm_up(py, read_config()["DEFAULT_MODEL"])
         if not args.no_browser:
             webbrowser.open(url)
         log.info("\nPara salir, cierra esta ventana o pulsa Ctrl+C.")

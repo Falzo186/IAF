@@ -19,6 +19,10 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 DEFAULT_MODEL = "qwen2.5:1.5b"
 SUPPORTED_MODELS = ["qwen2.5:1.5b", "llama3.2:1b", "deepseek-r1:1.5b"]
 
+# Tiempo que Ollama mantiene el modelo en RAM tras la última petición (su valor por defecto,
+# 5 min, lo descargaba si el presentador hablaba un rato entre preguntas).
+KEEP_ALIVE = "60m"
+
 # Las consultas verificadas responden con la frase determinística de analytics.insight
 # (instantánea). Con True, además redacta la respuesta el LLM (p50 medida: 11 s en CPU con
 # qwen2.5:1.5b; ver fase4.md). En el Asistente se puede activar con "Redacción con IA".

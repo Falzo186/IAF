@@ -165,6 +165,32 @@ def test_background_pull_indicator(monkeypatch, tmp_path):
     assert any("↓ descargando… 37 %" in m.value for m in at.markdown)
 
 
+def test_model_downloaded_but_not_loaded_shows_loading_and_warms_up():
+    class ColdBackend(FakeBackend):
+        def __init__(self):
+            super().__init__()
+            self.warmed = []
+
+        def is_model_loaded(self, name):
+            return False
+
+        def start_warm_up(self, name):
+            self.warmed.append(name)
+
+    backend = ColdBackend()
+    at = assistant(backend=backend)
+    assert any("◐ cargando…" in m.value for m in at.markdown)
+    assert backend.warmed and backend.warmed[0] == "qwen2.5:1.5b"
+
+
+def test_loaded_model_shows_ready():
+    class WarmBackend(FakeBackend):
+        def is_model_loaded(self, name):
+            return True
+    at = assistant(backend=WarmBackend())
+    assert any("● listo" in m.value for m in at.markdown)
+
+
 def test_missing_database_shows_clear_error(monkeypatch, tmp_path):
     at = AppTest.from_file(str(config.BASE_DIR / "app.py"), default_timeout=TIMEOUT)
     monkeypatch.setattr(config, "DB_PATH", tmp_path / "no_existe.db")

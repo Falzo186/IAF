@@ -31,6 +31,7 @@ def test_is_server_up_false_and_fast(dead_host):
     lambda: om.chat("qwen2.5:1.5b", [{"role": "user", "content": "hola"}]),
     lambda: list(om.pull_model("qwen2.5:1.5b")),
     lambda: om.unload_model("qwen2.5:1.5b"),
+    lambda: om.loaded_models(),
 ])
 def test_connection_errors_become_ollama_unavailable(dead_host, call):
     with pytest.raises(om.OllamaUnavailable, match="No se pudo conectar"):
@@ -39,3 +40,16 @@ def test_connection_errors_become_ollama_unavailable(dead_host, call):
 
 def test_client_is_singleton():
     assert om.get_client() is om.get_client()
+
+
+def test_chat_uses_keep_alive(monkeypatch):
+    sent = {}
+
+    class Client:
+        def chat(self, **kwargs):
+            sent.update(kwargs)
+            return type("R", (), {"message": type("M", (), {"content": "ok"})()})()
+
+    monkeypatch.setattr(om, "get_client", lambda: Client())
+    assert om.chat("qwen2.5:1.5b", [{"role": "user", "content": "hola"}]) == "ok"
+    assert sent["keep_alive"] == config.KEEP_ALIVE == "60m"

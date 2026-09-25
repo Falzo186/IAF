@@ -13,6 +13,7 @@ import streamlit as st
 import config
 import ollama_manager
 import pull_log
+import warmup
 import sql_engine as se
 from ui import charts
 
@@ -93,16 +94,37 @@ c_ai.toggle("Redacción con IA", key="ai_writing", disabled=not status["up"],
             help="Las consultas verificadas responden al instante con una frase calculada. Actívalo "
                  "para que el modelo redacte la respuesta (unos 11 s más por pregunta en CPU).")
 
+def model_loaded(model: str) -> bool:
+    """¿Está el modelo cargado en RAM (/api/ps)? Si no se puede saber, se asume que sí."""
+    check = getattr(backend(), "is_model_loaded", None)
+    if check is None:
+        return True
+    try:
+        return check(model)
+    except Exception:
+        return True
+
+
+def is_warming(model: str) -> bool:
+    return (status["up"] and not status.get("disabled") and is_local(model, status["models"])
+            and not model_loaded(model))
+
+
 downloading = pull_log.progress(selected, config.LOGS_DIR) is not None
+warming = not downloading and is_warming(selected)
+if warming:
+    # Descargado pero no en RAM: se precalienta en segundo plano (una vez por proceso). Normalmente
+    # ya lo lanzó bootstrap.py; esto cubre abrir la app sin él o después de cambiar de modelo.
+    getattr(backend(), "start_warm_up", warmup.start_background)(selected)
 
 
-@st.fragment(run_every=3 if downloading else None)
+@st.fragment(run_every=3 if (downloading or warming) else None)
 def model_state() -> None:
-    """Indicador del modelo; mientras hay una descarga en segundo plano se refresca solo."""
+    """Indicador del modelo; mientras descarga o se carga en RAM se refresca solo."""
     pct = pull_log.progress(selected, config.LOGS_DIR)
     if pct is not None:
         state = f"↓ descargando… {pct:.0f} %"
-    elif downloading:            # la descarga terminó desde el último refresco
+    elif downloading or (warming and not is_warming(selected)):  # terminó desde el último refresco
         ollama_status(force=True)
         st.rerun(scope="app")
         return
@@ -110,10 +132,12 @@ def model_state() -> None:
         state = "○ modo sin IA"
     elif not status["up"]:
         state = "○ Ollama apagado"
-    elif is_local(selected, status["models"]):
-        state = "● listo"
-    else:
+    elif not is_local(selected, status["models"]):
         state = "↓ no descargado"
+    elif warming:
+        state = "◐ cargando…"
+    else:
+        state = "● listo"
     st.markdown(f"<div class='status-dot'>{state}</div>", unsafe_allow_html=True)
 
 
