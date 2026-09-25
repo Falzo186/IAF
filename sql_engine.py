@@ -93,6 +93,9 @@ COLUMN_NOTES = {
         "is_shipped": "1 si shipped_date no es NULL",
         "is_late": "1 si se envió después de required_date",
         "days_late": "días de retraso (0 a tiempo, NULL sin enviar)",
+        # Nota de tabla (sin columna): qwen añadía category_name a v_orders al filtrar por categoría.
+        "_nota": "v_orders NO tiene category_name, brand_name ni product_name: para filtrar por "
+                 "ellos usa v_order_lines y cuenta órdenes con COUNT(DISTINCT order_id)",
     },
     "stocks": {
         "store_id": "no hay store_name aquí: JOIN stores ON stores.store_id = stocks.store_id",
@@ -124,7 +127,7 @@ def _schema_context_cached(db_path: str) -> tuple[str, str, str]:
                 cols.append(f"{name} {t}")
             lines.append(f"{obj}({', '.join(cols)})")
             for col, note in COLUMN_NOTES.get(obj, {}).items():
-                lines.append(f"  -- {col}: {note}")
+                lines.append(f"  -- {note}" if col == "_nota" else f"  -- {col}: {note}")
 
         values = lambda sql: ", ".join(r[0] for r in conn.execute(sql))  # noqa: E731
         meta = _metadata(conn)
@@ -235,6 +238,23 @@ def build_system_prompt(db_path: Path = config.DB_PATH) -> str:
     return SYSTEM_PROMPT_TEMPLATE.format(schema=schema, reference_date=ref_date, examples=examples)
 
 
+_FOLLOW_UP_START = re.compile(
+    r"^(y|e|ahora|lo mismo|igual|tambien|pero|y si|que tal|solo|en 20\d\d|para)\b")
+_FOLLOW_UP_REFERENCE = re.compile(
+    r"\b(esos|esas|estos|estas|eso|esto|ellos|ellas|lo anterior|la anterior|el anterior|"
+    r"ese mismo|esa misma|mismo periodo|misma tienda|misma consulta)\b")
+
+
+def is_follow_up(question: str) -> bool:
+    """¿Es una pregunta de seguimiento ("¿Y en 2016?", "Ahora solo Baldwin", "¿Cuáles de esas…")?
+
+    Solo estas reciben el historial. Con historial en preguntas nuevas, los modelos pequeños
+    copiaban filtros y tablas de la respuesta anterior (p. ej. el año 2017 y v_orders de D2 en D3).
+    """
+    norm = normalize_text(question)
+    return bool(_FOLLOW_UP_START.search(norm) or _FOLLOW_UP_REFERENCE.search(norm))
+
+
 def _history_messages(history: list[dict] | None) -> list[dict]:
     msgs = []
     for turn in (history or [])[-HISTORY_TURNS:]:
@@ -299,7 +319,11 @@ _ALLOWED_ROOTS = (exp.Select, exp.Union, exp.Intersect, exp.Except)
 
 
 def _check_forbidden_tokens(sql: str) -> None:
-    tokens = sqlglot.tokenize(sql, read="sqlite")
+    try:
+        tokens = sqlglot.tokenize(sql, read="sqlite")
+    except sqlglot.errors.TokenError as exc:
+        # SQL mal formada (p. ej. comillas sin cerrar): es un error de validación, con reintento.
+        raise SQLValidationError(f"SQL con errores de sintaxis: {str(exc).splitlines()[0][:120]}") from exc
     for i, tok in enumerate(tokens):
         if tok.token_type in (sqlglot.TokenType.STRING, sqlglot.TokenType.IDENTIFIER):
             continue  # literales y "identificadores entre comillas" no son palabras clave
@@ -531,6 +555,24 @@ def extract_filters(question: str, db_path: Path = config.DB_PATH) -> dict:
     return out
 
 
+_WRITE_VERBS = (r"borra|borrar|borres|elimina|eliminar|elimines|suprime|suprimir|vacia|vaciar|"
+                r"modifica|modificar|actualiza|actualizar|inserta|insertar|agrega|agregar|anade|"
+                r"anadir|crea|crear|cambia|cambiar|renombra|renombrar|resetea|limpia|limpiar|"
+                r"drop|delete|update|insert|truncate|alter")
+_WRITE_REQUEST_RE = re.compile(
+    rf"^(?:(?:puedes|podrias|quiero que|necesito que|por favor)\s+)?(?:{_WRITE_VERBS})\b")
+READ_ONLY_ANSWER = (
+    "Solo puedo consultar los datos: la base de datos es de solo lectura y no modifico, "
+    "borro ni agrego registros. Si quieres, te muestro esa información; por ejemplo, "
+    "\"¿cuántos clientes hay por estado?\"."
+)
+
+
+def is_write_request(question: str) -> bool:
+    """¿Pide la pregunta modificar datos ("Borra todos los clientes…", "Actualiza el precio…")?"""
+    return bool(_WRITE_REQUEST_RE.search(normalize_text(question)))
+
+
 def plan_route(question: str, db_path: Path = config.DB_PATH) -> tuple:
     """Decide la ruta: ("verificada" | "llm_anclada" | "llm", consulta, filtros, no soportados)."""
     bq = match_business_query(question)
@@ -668,6 +710,11 @@ def answer_question(question: str, model: str, history: list[dict] | None = None
     if verified_synthesis is None:
         verified_synthesis = config.VERIFIED_SYNTHESIS
     result = QueryResult(question=question, model=model)
+    if is_write_request(question):
+        # Guarda previa al LLM: la base es de solo lectura (y la conexión también), pero así la
+        # respuesta es inmediata y clara en vez de depender de lo que genere el modelo.
+        result.source, result.answer = "solo_lectura", READ_ONLY_ANSWER
+        return result
     try:
         llm = llm or _default_llm()
         db_path = Path(db_path)
@@ -686,7 +733,9 @@ def answer_question(question: str, model: str, history: list[dict] | None = None
                 result.source, result.business_query_id = "llm_anclada", bq.id
                 result.unsupported_filters = unsupported
                 anchor = (bq, render_sql(bq, **params))
-            _generate_and_run(result, question, history, llm, db_path, anchor)
+            # El historial solo acompaña a las preguntas de seguimiento (ver is_follow_up).
+            _generate_and_run(result, question, history if is_follow_up(question) else None,
+                              llm, db_path, anchor)
             if result.error:
                 return result
 
@@ -711,6 +760,7 @@ ANCHOR_TEMPLATE = (
     "forma de calcular los montos y adáptala a la pregunta (agrega o cambia filtros como "
     "categoría, marca, ciudad, cliente, vendedor o el top-N que se pide):\n```sql\n{sql}\n```"
 )
+
 
 
 def _generate_and_run(result: QueryResult, question: str, history: list[dict] | None,

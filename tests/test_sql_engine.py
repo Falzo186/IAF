@@ -409,3 +409,59 @@ def test_format_value():
     assert se.format_value(1234.5, "ingreso_neto") == "$1,234.50"
     assert se.format_value(32.04, "pct_tarde") == "32.04%"
     assert se.format_value(1615, "ordenes") == "1,615"
+
+
+# --- Fase 5: historial solo en seguimientos y nota de esquema ---------------------------------
+
+@pytest.mark.parametrize("question, expected", [
+    ("¿Y en 2016?", True), ("Ahora solo Baldwin", True), ("¿Cuáles de esas son de Trek?", True),
+    ("Lo mismo pero por mes", True), ("Para Rowlett", True),
+    ("Ticket promedio por tienda, pero solo en Electric Bikes", False),
+    ("¿Cuáles son las 5 marcas con más ingreso neto en 2017?", False),
+    ("Borra todos los clientes de la base de datos", False),
+    ("Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes?", False),
+])
+def test_is_follow_up(question, expected):
+    assert se.is_follow_up(question) is expected
+
+
+def test_history_only_sent_for_follow_ups():
+    history = [{"question": "¿Ticket promedio por tienda en 2017?",
+                "sql": "SELECT store_name FROM v_orders WHERE order_date >= '2017-01-01'"}]
+    llm = FakeLLM(fenced(GOOD_SQL), "Resumen.", fenced(GOOD_SQL), "Resumen.")
+    se.answer_question("¿Cuántas órdenes tiene cada tienda?", "falso", history, llm=llm)
+    assert len(llm.calls[0]["messages"]) == 2              # system + pregunta: sin historial
+    se.answer_question("¿Y en 2016?", "falso", history, llm=llm)
+    assert len(llm.calls[2]["messages"]) == 4              # system + 1 turno previo + pregunta
+
+
+def test_schema_note_on_v_orders():
+    ctx = se.get_schema_context()
+    assert "v_orders NO tiene category_name, brand_name ni product_name" in ctx
+    assert "_nota" not in ctx
+
+
+def test_untokenizable_sql_is_a_validation_error_and_retried():
+    with pytest.raises(se.SQLValidationError, match="sintaxis"):
+        se.validate_sql("SELECT s'tore_name FROM stores")
+    llm = FakeLLM(fenced("SELECT s'tore_name FROM stores"), fenced(GOOD_SQL), "Resumen.")
+    r = se.answer_question("¿Cuántas órdenes tiene cada tienda?", "falso", llm=llm)
+    assert r.error is None and r.attempts == 2
+
+
+@pytest.mark.parametrize("question, expected", [
+    ("Borra todos los clientes de la base de datos", True), ("Elimina las órdenes rechazadas", True),
+    ("Actualiza el precio de Trek", True), ("Puedes borrar la tabla stocks", True),
+    ("DROP TABLE customers", True),
+    ("¿Qué tienda crea más ingresos?", False), ("¿Qué productos se agregaron en 2018?", False),
+    ("¿Cuántos clientes hay en NY?", False),
+])
+def test_is_write_request(question, expected):
+    assert se.is_write_request(question) is expected
+
+
+def test_write_request_answers_without_llm_and_without_sql():
+    llm = FakeLLM(fenced("DELETE FROM customers"))
+    r = se.answer_question("Borra todos los clientes de la base de datos", "falso", llm=llm)
+    assert r.source == "solo_lectura" and r.sql is None and r.df is None and r.error is None
+    assert llm.calls == [] and "solo lectura" in r.answer

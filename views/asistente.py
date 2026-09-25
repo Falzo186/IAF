@@ -27,6 +27,7 @@ SOURCE_BADGES = {
     "verificada": ("Verificada", "badge-verificada"),
     "llm_anclada": ("IA anclada", "badge-anclada"),
     "llm": ("Generada por IA", "badge-llm"),
+    "solo_lectura": ("Solo lectura", "badge-anclada"),
 }
 SUGGESTIONS = [
     "¿Qué productos se venden mucho pero están a punto de agotarse?",

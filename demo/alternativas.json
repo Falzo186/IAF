@@ -1,0 +1,14 @@
+{
+  "D3": [
+    "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    {"pregunta": "Dame el top 3 de vendedores de bicicletas eléctricas por ingreso neto",
+     "referencia": "SELECT staff_name AS vendedor, ROUND(SUM(net_amount), 2) AS ingreso_neto FROM v_order_lines WHERE order_status = 4 AND category_name = 'Electric Bikes' GROUP BY staff_id ORDER BY ingreso_neto DESC LIMIT 3",
+     "check": {"mode": "exact", "key_columns": ["vendedor"]},
+     "nota": "Reemplazo para el hueco 'IA anclada': N3 + top-N no soportado."},
+    {"pregunta": "¿Cuánto dinero perdimos por órdenes rechazadas de clientes de Texas?",
+     "referencia": "SELECT COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS monto_neto_perdido FROM v_orders WHERE order_status = 3 AND customer_state = 'TX'",
+     "check": {"mode": "subset", "k": 1, "key_columns": ["monto_neto_perdido"]},
+     "nota": "Reemplazo para el hueco 'IA anclada': N10 + estado no soportado."}
+  ]
+}
