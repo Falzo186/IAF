@@ -1,0 +1,9 @@
+# Finales de línea fijos para los scripts de arranque (independiente de core.autocrlf)
+ejecutar      text eol=lf
+*.sh          text eol=lf
+*.bat         text eol=crlf
+# Datos: se versionan byte a byte, sin conversión de finales de línea
+data/**/*.csv -text
+*.png         binary
+*.webm        binary
+*.mp4         binary

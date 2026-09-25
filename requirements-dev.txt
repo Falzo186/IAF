@@ -1,0 +1,4 @@
+# Desarrollo: pruebas y capturas de pantalla
+-r requirements.txt
+pytest>=8
+playwright>=1.45

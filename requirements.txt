@@ -1,0 +1,6 @@
+# Dependencias para ejecutar la aplicación (las instala bootstrap.py en .venv)
+pandas>=2.2
+ollama>=0.4
+sqlglot>=25
+streamlit>=1.40
+plotly>=5.20

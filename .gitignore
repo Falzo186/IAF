@@ -1,0 +1,15 @@
+# Base de datos generada por database_builder.py
+bikestores.db
+*.tmp
+*.db-journal
+*.tmp-journal
+
+# Entorno y registros del arranque (bootstrap.py)
+.venv/
+logs/
+*.lock
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/

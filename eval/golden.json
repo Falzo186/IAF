@@ -1,0 +1,298 @@
+{
+  "version": 1,
+  "descripcion": "Conjunto de evaluación Text-to-SQL. Nivel 'basico': preguntas directas con SQL de referencia escrita a mano. Nivel 'negocio': una pregunta natural por necesidad; su referencia es la SQL de business_queries.py (campo business_query). 'check' define cómo se compara el resultado: 'exact' = mismo número de filas y cada fila de referencia aparece en el resultado; 'subset' = las primeras k filas de referencia aparecen en el resultado. 'key_columns' limita la comparación a las columnas esenciales (el orden y el alias de las columnas no importan). Nivel 'anclada': una necesidad de negocio con un filtro que la consulta verificada no soporta (categoría, marca, top-N o estado); el sistema completo debe resolverla con el LLM anclado a la SQL verificada.",
+  "items": [
+    {
+      "id": "B1",
+      "nivel": "basico",
+      "pregunta": "¿Cuántos clientes hay en el estado de NY?",
+      "sql": "SELECT COUNT(*) AS clientes FROM customers WHERE state = 'NY'",
+      "check": {
+        "mode": "exact"
+      }
+    },
+    {
+      "id": "B2",
+      "nivel": "basico",
+      "pregunta": "¿Cuál fue el ingreso neto total de las ventas en 2017?",
+      "sql": "SELECT ROUND(SUM(net_amount), 2) AS ingreso_neto FROM v_order_lines WHERE order_status = 4 AND strftime('%Y', order_date) = '2017'",
+      "check": {
+        "mode": "exact"
+      }
+    },
+    {
+      "id": "B3",
+      "nivel": "basico",
+      "pregunta": "¿Cuáles son los 5 productos con más unidades vendidas?",
+      "sql": "SELECT product_name AS producto, SUM(quantity) AS unidades FROM v_order_lines WHERE order_status = 4 GROUP BY product_name ORDER BY unidades DESC LIMIT 5",
+      "check": {
+        "mode": "exact",
+        "key_columns": [
+          "producto"
+        ]
+      }
+    },
+    {
+      "id": "B4",
+      "nivel": "basico",
+      "pregunta": "¿Cuántas órdenes hay en cada estatus (Pendiente, En proceso, Rechazada, Completada)?",
+      "sql": "SELECT status_label AS estatus, COUNT(*) AS ordenes FROM v_orders GROUP BY order_status ORDER BY order_status",
+      "check": {
+        "mode": "exact",
+        "key_columns": [
+          "ordenes"
+        ]
+      }
+    },
+    {
+      "id": "B5",
+      "nivel": "basico",
+      "pregunta": "¿Qué tienda tuvo el mayor ingreso neto por ventas en 2017?",
+      "sql": "SELECT store_name AS tienda, ROUND(SUM(net_amount), 2) AS ingreso_neto FROM v_order_lines WHERE order_status = 4 AND strftime('%Y', order_date) = '2017' GROUP BY store_name ORDER BY ingreso_neto DESC LIMIT 1",
+      "check": {
+        "mode": "exact",
+        "key_columns": [
+          "tienda"
+        ]
+      }
+    },
+    {
+      "id": "B6",
+      "nivel": "basico",
+      "pregunta": "Muestra el ingreso neto de las ventas por categoría, de mayor a menor.",
+      "sql": "SELECT category_name AS categoria, ROUND(SUM(net_amount), 2) AS ingreso_neto FROM v_order_lines WHERE order_status = 4 GROUP BY category_name ORDER BY ingreso_neto DESC",
+      "check": {
+        "mode": "exact"
+      }
+    },
+    {
+      "id": "B7",
+      "nivel": "basico",
+      "pregunta": "¿Cuántas unidades hay en inventario en cada tienda?",
+      "sql": "SELECT s.store_name AS tienda, SUM(st.quantity) AS unidades FROM stocks st JOIN stores s ON s.store_id = st.store_id GROUP BY s.store_name ORDER BY unidades DESC",
+      "check": {
+        "mode": "exact"
+      }
+    },
+    {
+      "id": "B8",
+      "nivel": "basico",
+      "pregunta": "¿Cuántas órdenes completadas hubo en 2016?",
+      "sql": "SELECT COUNT(*) AS ordenes FROM orders WHERE order_status = 4 AND strftime('%Y', order_date) = '2016'",
+      "check": {
+        "mode": "exact"
+      }
+    },
+    {
+      "id": "B9",
+      "nivel": "basico",
+      "pregunta": "¿Cuál fue el ingreso neto de las ventas por mes en 2017?",
+      "sql": "SELECT strftime('%Y-%m', order_date) AS mes, ROUND(SUM(net_amount), 2) AS ingreso_neto FROM v_order_lines WHERE order_status = 4 AND strftime('%Y', order_date) = '2017' GROUP BY mes ORDER BY mes",
+      "check": {
+        "mode": "exact",
+        "key_columns": [
+          "ingreso_neto"
+        ]
+      }
+    },
+    {
+      "id": "B10",
+      "nivel": "basico",
+      "pregunta": "¿Cuál es el precio de lista promedio de los productos de la marca Trek?",
+      "sql": "SELECT ROUND(AVG(p.list_price), 2) AS precio_promedio FROM products p JOIN brands b ON b.brand_id = p.brand_id WHERE b.brand_name = 'Trek'",
+      "check": {
+        "mode": "exact"
+      }
+    },
+    {
+      "id": "N1",
+      "nivel": "negocio",
+      "business_query": "N1",
+      "pregunta": "¿Cuánto dinero estamos dejando sobre la mesa con los descuentos en cada producto?",
+      "check": {
+        "mode": "subset",
+        "k": 3,
+        "key_columns": [
+          "producto",
+          "descuento_cedido"
+        ]
+      }
+    },
+    {
+      "id": "N2",
+      "nivel": "negocio",
+      "business_query": "N2",
+      "pregunta": "¿Qué productos se venden mucho pero están a punto de agotarse en alguna tienda?",
+      "check": {
+        "mode": "exact",
+        "key_columns": [
+          "producto",
+          "tienda"
+        ]
+      }
+    },
+    {
+      "id": "N3",
+      "nivel": "negocio",
+      "business_query": "N3",
+      "pregunta": "¿Quiénes son nuestros mejores vendedores de bicicletas eléctricas?",
+      "check": {
+        "mode": "exact",
+        "key_columns": [
+          "vendedor",
+          "ingreso_neto"
+        ]
+      }
+    },
+    {
+      "id": "N4",
+      "nivel": "negocio",
+      "business_query": "N4",
+      "pregunta": "¿En qué ciudades se concentran las compras hechas con el menor descuento?",
+      "check": {
+        "mode": "subset",
+        "k": 3,
+        "key_columns": [
+          "ciudad",
+          "ingreso_neto_desc_minimo"
+        ]
+      }
+    },
+    {
+      "id": "N5",
+      "nivel": "negocio",
+      "business_query": "N5",
+      "pregunta": "¿Cuánto nos están costando los envíos que llegan tarde y en qué tiendas pasa más?",
+      "check": {
+        "mode": "subset",
+        "k": 3,
+        "key_columns": [
+          "tienda",
+          "monto_neto"
+        ]
+      }
+    },
+    {
+      "id": "N6",
+      "nivel": "negocio",
+      "business_query": "N6",
+      "pregunta": "¿Qué mercancía lleva meses en bodega sin moverse y cuánto capital tenemos ahí parado?",
+      "check": {
+        "mode": "exact",
+        "key_columns": [
+          "producto",
+          "valor_inmovilizado"
+        ]
+      }
+    },
+    {
+      "id": "N7",
+      "nivel": "negocio",
+      "business_query": "N7",
+      "pregunta": "¿Qué clientes suelen combinar varias marcas en un mismo pedido?",
+      "check": {
+        "mode": "subset",
+        "k": 6,
+        "key_columns": [
+          "cliente",
+          "max_marcas"
+        ]
+      }
+    },
+    {
+      "id": "N8",
+      "nivel": "negocio",
+      "business_query": "N8",
+      "pregunta": "¿Cuánto gasta en promedio un cliente por pedido en cada una de nuestras tiendas?",
+      "check": {
+        "mode": "exact",
+        "key_columns": [
+          "tienda",
+          "ticket_promedio"
+        ]
+      }
+    },
+    {
+      "id": "N9",
+      "nivel": "negocio",
+      "business_query": "N9",
+      "pregunta": "¿Qué categorías y marcas tienen la salida más lenta del catálogo?",
+      "check": {
+        "mode": "subset",
+        "k": 3,
+        "key_columns": [
+          "nombre",
+          "rotacion_mensual"
+        ]
+      }
+    },
+    {
+      "id": "N10",
+      "nivel": "negocio",
+      "business_query": "N10",
+      "pregunta": "¿Cuánto dinero perdimos por pedidos que al final no se concretaron?",
+      "check": {
+        "mode": "subset",
+        "k": 1,
+        "key_columns": [
+          "monto_neto_perdido"
+        ]
+      }
+    },
+    {
+      "id": "A1",
+      "nivel": "anclada",
+      "business_query": "N8",
+      "pregunta": "¿Cuál es el ticket promedio por tienda, pero solo en ventas de Electric Bikes?",
+      "sql": "SELECT store_name AS tienda, ROUND(SUM(net_amount) / COUNT(DISTINCT order_id), 2) AS ticket_promedio FROM v_order_lines WHERE order_status = 4 AND category_name = 'Electric Bikes' GROUP BY store_name ORDER BY ticket_promedio DESC",
+      "check": {
+        "mode": "exact",
+        "key_columns": [
+          "tienda",
+          "ticket_promedio"
+        ]
+      }
+    },
+    {
+      "id": "A2",
+      "nivel": "anclada",
+      "business_query": "N1",
+      "pregunta": "¿Qué productos de la marca Trek nos cuestan más en descuentos?",
+      "sql": "SELECT product_name AS producto, ROUND(SUM(discount_amount), 2) AS descuento_cedido FROM v_order_lines WHERE order_status = 4 AND brand_name = 'Trek' GROUP BY product_name ORDER BY descuento_cedido DESC LIMIT 10",
+      "check": {
+        "mode": "subset",
+        "k": 3,
+        "key_columns": [
+          "producto"
+        ]
+      }
+    },
+    {
+      "id": "A3",
+      "nivel": "anclada",
+      "business_query": "N3",
+      "pregunta": "Dame el top 3 de vendedores de bicicletas eléctricas por ingreso neto",
+      "sql": "SELECT staff_name AS vendedor, ROUND(SUM(net_amount), 2) AS ingreso_neto FROM v_order_lines WHERE order_status = 4 AND category_name = 'Electric Bikes' GROUP BY staff_id ORDER BY ingreso_neto DESC LIMIT 3",
+      "check": {
+        "mode": "exact",
+        "key_columns": [
+          "vendedor"
+        ]
+      }
+    },
+    {
+      "id": "A4",
+      "nivel": "anclada",
+      "business_query": "N10",
+      "pregunta": "¿Cuánto dinero perdimos por órdenes rechazadas de clientes de Texas?",
+      "sql": "SELECT COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS monto_neto_perdido FROM v_orders WHERE order_status = 3 AND customer_state = 'TX'",
+      "check": {
+        "mode": "subset",
+        "k": 1,
+        "key_columns": [
+          "monto_neto_perdido"
+        ]
+      }
+    }
+  ]
+}

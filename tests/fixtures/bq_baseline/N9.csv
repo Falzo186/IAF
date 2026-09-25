@@ -1,0 +1,17 @@
+dimension,nombre,unidades,meses_con_ventas,rotacion_mensual
+Categoría,Electric Bikes,252,26,9.69
+Categoría,Cyclocross Bicycles,365,27,13.52
+Categoría,Comfort Bicycles,733,27,27.15
+Categoría,Road Bikes,449,15,29.93
+Categoría,Children Bicycles,1047,27,38.78
+Categoría,Mountain Bikes,1607,27,59.52
+Categoría,Cruisers Bicycles,1865,27,69.07
+Marca,Strider,13,3,4.33
+Marca,Heller,130,25,5.2
+Marca,Ritchey,117,22,5.32
+Marca,Pure Cycles,360,26,13.85
+Marca,Haro,297,15,19.8
+Marca,Surly,838,27,31.04
+Marca,Sun Bicycles,670,15,44.67
+Marca,Trek,1564,27,57.93
+Marca,Electra,2329,27,86.26
