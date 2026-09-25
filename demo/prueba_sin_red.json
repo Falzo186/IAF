@@ -1,0 +1,58 @@
+{
+  "internet": {
+    "status": 0,
+    "detalle": "URLError: <urlopen error [WinError 10061] No se puede establecer una conexión ya que el equipo de destino denegó expresa",
+    "s": 2.11
+  },
+  "ollama_registro": {
+    "status": 500,
+    "detalle": "{\"error\":\"pull model manifest: Get \\\"https://registry.ollama.ai/v2/library/smollm/manifests/135m\\\": proxyconnect tcp: dial tcp 127.0.0.1:9: connectex: No connec",
+    "s": 0.06
+  },
+  "puerto": 8502,
+  "arranque": {
+    "health_200_s": 6.6,
+    "intento_pip": false,
+    "intento_pull": false,
+    "precalentamiento": true,
+    "log": [
+      "Dependencias al día (requirements.txt sin cambios).",
+      "",
+      "Base de datos lista.",
+      "",
+      "Ollama responde en http://127.0.0.1:11434.",
+      "Modelo qwen2.5:1.5b disponible.",
+      "",
+      "El puerto 8501 está ocupado; se usa 8502.",
+      "",
+      "App lista en http://localhost:8502 (health 200 tras 3.8 s; arranque total 5.5 s).",
+      "Precalentando qwen2.5:1.5b en segundo plano (~20 s; el Asistente muestra ◐ cargando…).",
+      ""
+    ]
+  },
+  "chat": {
+    "listo_tras_s": 0.0,
+    "D1": {
+      "s": 0.4,
+      "origen": "Verificada"
+    },
+    "D4": {
+      "s": 14.9,
+      "origen": "Generada por IA"
+    },
+    "ultima_respuesta": "pedal_bike check Listo Las cinco marcas con mayores ingresos netos en 2017 son: Trek: $2,124,167.94 Electra: $357,323.70 Surly: $339,621.60 Sun Bicycles: $286,949.29 Haro: $156,137.52 Generada por IA keyboard_arrow_right SQL 14.7 s · qwen2.5:1.5b"
+  },
+  "cierre_codigo": 0,
+  "pip_sin_red": {
+    "codigo": 0,
+    "s": 12.3,
+    "aviso": true,
+    "app_arranco": true
+  },
+  "pull_sin_red": {
+    "codigo": 1,
+    "s": 0.3,
+    "lock_eliminado": true,
+    "log": "pulling manifest\t\nerror: pull model manifest: Get \"https://registry.ollama.ai/v2/library/smollm/manifests/135m\": proxyconnect tcp: dial tcp 127.0.0.1:9: connectex: No connection could be made because "
+  }
+}

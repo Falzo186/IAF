@@ -1,0 +1,247 @@
+[
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM",
+    "origen": "llm",
+    "intentos": 2,
+    "latencia_s": 16.38,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND order_date >= '2017-01-01' AND order_date <= '2017-12-31' AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: SQL con errores de sintaxis: Expecting ). Line 45, Col: 53.",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 42.58,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "WITH clientes AS (\n    SELECT customer_id, COUNT(*) AS ordenes\n    FROM v_orders\n    WHERE order_status = 4\n    GROUP BY customer_id\n),\ntiendas AS (\n    SELECT store_id, COUNT(*) AS ordenes\n    FROM v_orders\n    WHERE order_status = 4\n    GROUP BY store_id\n)\nSELECT tienda, ordenes, ROUND(SUM(net_total), 2) AS ticket_promedio\nFROM (\n    SELECT tienda, ordenes, net_total\n    FROM (\n        SELECT tienda, ordenes, net_total, ROW_NUMBER() OVER (PARTITION BY tienda ORDER BY net_total DESC) AS row_num\n        FROM (\n            SELECT tienda, ordenes, net_total\n            FROM (\n                SELECT tienda, customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n                FROM v_orders\n                WHERE order_status = 4\n                GROUP BY tienda, customer_id\n            ) AS subquery\n            JOIN (\n                SELECT customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n                FROM v_orders\n                WHERE order_status = 4\n                GROUP BY customer_id\n            ) AS subquery2\n            ON subquery.customer_id = subquery2.customer_id\n        ) AS subquery3\n    ) AS subquery4\n    JOIN (\n        SELECT customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n        FROM v_orders\n        WHERE order_status = 4\n        GROUP BY customer_id\n    ) AS subquery5\n    ON subquery4.customer_id = subquery5.customer_id\n    WHERE subquery5.customer_id = subquery4.customer_id\n    AND subquery5.customer_id = subquery3.customer_id\n    AND subquery5.customer_id = subquery2.customer_id\n    AND subquery5.customer_id = subquery1.customer_id",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM",
+    "origen": "llm",
+    "intentos": 2,
+    "latencia_s": 16.76,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND order_date >= '2017-01-01' AND order_date <= '2017-12-31' AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 2
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: SQL con errores de sintaxis: Expecting ). Line 45, Col: 53.",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 42.45,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "WITH clientes AS (\n    SELECT customer_id, COUNT(*) AS ordenes\n    FROM v_orders\n    WHERE order_status = 4\n    GROUP BY customer_id\n),\ntiendas AS (\n    SELECT store_id, COUNT(*) AS ordenes\n    FROM v_orders\n    WHERE order_status = 4\n    GROUP BY store_id\n)\nSELECT tienda, ordenes, ROUND(SUM(net_total), 2) AS ticket_promedio\nFROM (\n    SELECT tienda, ordenes, net_total\n    FROM (\n        SELECT tienda, ordenes, net_total, ROW_NUMBER() OVER (PARTITION BY tienda ORDER BY net_total DESC) AS row_num\n        FROM (\n            SELECT tienda, ordenes, net_total\n            FROM (\n                SELECT tienda, customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n                FROM v_orders\n                WHERE order_status = 4\n                GROUP BY tienda, customer_id\n            ) AS subquery\n            JOIN (\n                SELECT customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n                FROM v_orders\n                WHERE order_status = 4\n                GROUP BY customer_id\n            ) AS subquery2\n            ON subquery.customer_id = subquery2.customer_id\n        ) AS subquery3\n    ) AS subquery4\n    JOIN (\n        SELECT customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n        FROM v_orders\n        WHERE order_status = 4\n        GROUP BY customer_id\n    ) AS subquery5\n    ON subquery4.customer_id = subquery5.customer_id\n    WHERE subquery5.customer_id = subquery4.customer_id\n    AND subquery5.customer_id = subquery3.customer_id\n    AND subquery5.customer_id = subquery2.customer_id\n    AND subquery5.customer_id = subquery1.customer_id",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 2
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM",
+    "origen": "llm",
+    "intentos": 2,
+    "latencia_s": 16.32,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND order_date >= '2017-01-01' AND order_date <= '2017-12-31' AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 3
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: SQL con errores de sintaxis: Expecting ). Line 45, Col: 53.",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 41.75,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "WITH clientes AS (\n    SELECT customer_id, COUNT(*) AS ordenes\n    FROM v_orders\n    WHERE order_status = 4\n    GROUP BY customer_id\n),\ntiendas AS (\n    SELECT store_id, COUNT(*) AS ordenes\n    FROM v_orders\n    WHERE order_status = 4\n    GROUP BY store_id\n)\nSELECT tienda, ordenes, ROUND(SUM(net_total), 2) AS ticket_promedio\nFROM (\n    SELECT tienda, ordenes, net_total\n    FROM (\n        SELECT tienda, ordenes, net_total, ROW_NUMBER() OVER (PARTITION BY tienda ORDER BY net_total DESC) AS row_num\n        FROM (\n            SELECT tienda, ordenes, net_total\n            FROM (\n                SELECT tienda, customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n                FROM v_orders\n                WHERE order_status = 4\n                GROUP BY tienda, customer_id\n            ) AS subquery\n            JOIN (\n                SELECT customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n                FROM v_orders\n                WHERE order_status = 4\n                GROUP BY customer_id\n            ) AS subquery2\n            ON subquery.customer_id = subquery2.customer_id\n        ) AS subquery3\n    ) AS subquery4\n    JOIN (\n        SELECT customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n        FROM v_orders\n        WHERE order_status = 4\n        GROUP BY customer_id\n    ) AS subquery5\n    ON subquery4.customer_id = subquery5.customer_id\n    WHERE subquery5.customer_id = subquery4.customer_id\n    AND subquery5.customer_id = subquery3.customer_id\n    AND subquery5.customer_id = subquery2.customer_id\n    AND subquery5.customer_id = subquery1.customer_id",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 3
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM",
+    "origen": "llm",
+    "intentos": 2,
+    "latencia_s": 16.87,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND order_date >= '2017-01-01' AND order_date <= '2017-12-31' AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 4
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: SQL con errores de sintaxis: Expecting ). Line 45, Col: 53.",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 41.6,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "WITH clientes AS (\n    SELECT customer_id, COUNT(*) AS ordenes\n    FROM v_orders\n    WHERE order_status = 4\n    GROUP BY customer_id\n),\ntiendas AS (\n    SELECT store_id, COUNT(*) AS ordenes\n    FROM v_orders\n    WHERE order_status = 4\n    GROUP BY store_id\n)\nSELECT tienda, ordenes, ROUND(SUM(net_total), 2) AS ticket_promedio\nFROM (\n    SELECT tienda, ordenes, net_total\n    FROM (\n        SELECT tienda, ordenes, net_total, ROW_NUMBER() OVER (PARTITION BY tienda ORDER BY net_total DESC) AS row_num\n        FROM (\n            SELECT tienda, ordenes, net_total\n            FROM (\n                SELECT tienda, customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n                FROM v_orders\n                WHERE order_status = 4\n                GROUP BY tienda, customer_id\n            ) AS subquery\n            JOIN (\n                SELECT customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n                FROM v_orders\n                WHERE order_status = 4\n                GROUP BY customer_id\n            ) AS subquery2\n            ON subquery.customer_id = subquery2.customer_id\n        ) AS subquery3\n    ) AS subquery4\n    JOIN (\n        SELECT customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n        FROM v_orders\n        WHERE order_status = 4\n        GROUP BY customer_id\n    ) AS subquery5\n    ON subquery4.customer_id = subquery5.customer_id\n    WHERE subquery5.customer_id = subquery4.customer_id\n    AND subquery5.customer_id = subquery3.customer_id\n    AND subquery5.customer_id = subquery2.customer_id\n    AND subquery5.customer_id = subquery1.customer_id",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 4
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM",
+    "origen": "llm",
+    "intentos": 2,
+    "latencia_s": 16.72,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, COUNT(*) AS ordenes, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND order_date >= '2017-01-01' AND order_date <= '2017-12-31' AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 5
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: SQL con errores de sintaxis: Expecting ). Line 45, Col: 53.",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 41.46,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "WITH clientes AS (\n    SELECT customer_id, COUNT(*) AS ordenes\n    FROM v_orders\n    WHERE order_status = 4\n    GROUP BY customer_id\n),\ntiendas AS (\n    SELECT store_id, COUNT(*) AS ordenes\n    FROM v_orders\n    WHERE order_status = 4\n    GROUP BY store_id\n)\nSELECT tienda, ordenes, ROUND(SUM(net_total), 2) AS ticket_promedio\nFROM (\n    SELECT tienda, ordenes, net_total\n    FROM (\n        SELECT tienda, ordenes, net_total, ROW_NUMBER() OVER (PARTITION BY tienda ORDER BY net_total DESC) AS row_num\n        FROM (\n            SELECT tienda, ordenes, net_total\n            FROM (\n                SELECT tienda, customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n                FROM v_orders\n                WHERE order_status = 4\n                GROUP BY tienda, customer_id\n            ) AS subquery\n            JOIN (\n                SELECT customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n                FROM v_orders\n                WHERE order_status = 4\n                GROUP BY customer_id\n            ) AS subquery2\n            ON subquery.customer_id = subquery2.customer_id\n        ) AS subquery3\n    ) AS subquery4\n    JOIN (\n        SELECT customer_id, COUNT(*) AS ordenes, SUM(net_total) AS net_total\n        FROM v_orders\n        WHERE order_status = 4\n        GROUP BY customer_id\n    ) AS subquery5\n    ON subquery4.customer_id = subquery5.customer_id\n    WHERE subquery5.customer_id = subquery4.customer_id\n    AND subquery5.customer_id = subquery3.customer_id\n    AND subquery5.customer_id = subquery2.customer_id\n    AND subquery5.customer_id = subquery1.customer_id",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 5
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "llama3.2:1b",
+    "ok": false,
+    "motivo": "ruta llm (se esperaba llm_anclada); filas: esperadas 3, obtenidas 1",
+    "origen": "llm",
+    "intentos": 1,
+    "latencia_s": 7.72,
+    "respuesta": "El resultado (ingreso neto perienda) es $4,314.67.",
+    "sql": "SELECT ROUND(SUM(net_amount) / COUNT(*), 2) AS ingreso_neto_perienda\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "llama3.2:1b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT tienda, ROUND(SUM(net_amount) / COUNT(*), 2) AS ticket_promedio\nFROM v_orders\nWHERE orde",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 26.57,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT tienda, ROUND(SUM(net_amount) / COUNT(*), 2) AS ticket_promedio\nFROM v_orders\nWHERE order_status = 4 AND strftime('%Y', order_date) = '2017'\nGROUP BY tienda\nORDER BY ticket_promedio DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "llama3.2:1b",
+    "ok": false,
+    "motivo": "ruta llm (se esperaba llm_anclada); filas: esperadas 3, obtenidas 1",
+    "origen": "llm",
+    "intentos": 1,
+    "latencia_s": 8.35,
+    "respuesta": "El resultado (ingreso neto perienda) es $4,314.67.",
+    "sql": "SELECT ROUND(SUM(net_amount) / COUNT(*), 2) AS ingreso_neto_perienda\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 2
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "llama3.2:1b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT tienda, ROUND(SUM(net_amount) / COUNT(*), 2) AS ticket_promedio\nFROM v_orders\nWHERE orde",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 26.62,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT tienda, ROUND(SUM(net_amount) / COUNT(*), 2) AS ticket_promedio\nFROM v_orders\nWHERE order_status = 4 AND strftime('%Y', order_date) = '2017'\nGROUP BY tienda\nORDER BY ticket_promedio DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 2
+  }
+]

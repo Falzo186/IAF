@@ -166,7 +166,13 @@ tests/                                  pytest (todas las fases)
 tools/                                  capturas y medición de la interfaz
 data/bike_stores/                       los 9 CSV
 docs/capturas/                          capturas de pantalla
-fase1.md … fase4.md                     documentación de cada fase
+demo/                                   preguntas validadas, cifras clave y video de respaldo
+warmup.py                               precalentamiento del modelo (lo lanza el arranque)
+fase1.md … fase5.md                     documentación de cada fase
 ```
 
 Desarrollo: `pip install -r requirements-dev.txt` y `pytest -q`.
+
+**Para el congreso:** guion y preguntas validadas en [fase5.md](fase5.md) y
+[demo/validacion_demo.md](demo/validacion_demo.md); cifras en [demo/cifras_clave.md](demo/cifras_clave.md);
+video de respaldo en `demo/respaldo_demo.webm`.

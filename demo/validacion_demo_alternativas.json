@@ -1,0 +1,527 @@
+[
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order",
+    "origen": "llm",
+    "intentos": 2,
+    "latencia_s": 8.0,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 10",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, AVG(net_total) AS promedio_gasto\nFROM v_orders\nJOIN v_order_lines ",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 15.35,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, AVG(net_total) AS promedio_gasto\nFROM v_orders\nJOIN v_order_lines ol ON ol.order_id = v_orders.order_id\nJOIN products p ON p.product_id = ol.product_id\nJOIN brands b ON b.brand_id = p.brand_id\nJOIN categories c ON c.category_id = p.category_id\nWHERE order_status = 4 AND b.brand_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY promedio_gasto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Dame el top 3 de vendedores de bicicletas eléctricas por ingreso neto",
+    "modelo": "qwen2.5:1.5b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 18.97,
+    "respuesta": "La vendedora Marcelene Boyer lidera el top 3 de vendedores de bicicletas eléctricas por ingreso neto, con un total de $271,184.17. Su tienda Baldwin Bikes ha sido la responsable de 92 unidades vendidas y 55 órdenes. Por su parte, la vendedora Venita Daniel se encuentra en el segundo lugar, con ingresos de $261,795.84, vendiendo 85 unidades y 55 órdenes. Finalmente, Genna Serrano, la vendedora de Santa Cruz Bikes, obtiene el tercer lugar con ingresos de $79,671.34, vendiendo 29 unidades y 19 órdenes.",
+    "sql": "SELECT staff_name AS vendedor, store_name AS tienda,\n       ROUND(SUM(net_amount), 2)  AS ingreso_neto,\n       SUM(quantity)              AS unidades,\n       COUNT(DISTINCT order_id)   AS ordenes\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC\nLIMIT 3",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "top-N",
+        "3"
+      ]
+    ],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto dinero perdimos por órdenes rechazadas de clientes de Texas?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 11.46,
+    "respuesta": "En la consulta ejecutada, hemos identificado que perdemos $86,018.94 debido a las órdenes rechazadas de clientes procedentes de Texas.",
+    "sql": "SELECT \n    'Total' AS nivel, \n    'Todas' AS detalle, \n    COUNT(*) AS ordenes, \n    ROUND(SUM(net_total), 2) AS monto_neto_perdido\nFROM \n    v_orders \nWHERE \n    order_status = 3 \n    AND customer_state = 'TX'\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "estado",
+        "TX"
+      ]
+    ],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order",
+    "origen": "llm",
+    "intentos": 2,
+    "latencia_s": 8.92,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 10",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 2
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, AVG(net_total) AS promedio_gasto\nFROM v_orders\nJOIN v_order_lines ",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 15.16,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, AVG(net_total) AS promedio_gasto\nFROM v_orders\nJOIN v_order_lines ol ON ol.order_id = v_orders.order_id\nJOIN products p ON p.product_id = ol.product_id\nJOIN brands b ON b.brand_id = p.brand_id\nJOIN categories c ON c.category_id = p.category_id\nWHERE order_status = 4 AND b.brand_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY promedio_gasto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 2
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Dame el top 3 de vendedores de bicicletas eléctricas por ingreso neto",
+    "modelo": "qwen2.5:1.5b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 13.76,
+    "respuesta": "El vendedor Marcelene Boyer lidera la lista de vendedores de bicicletas eléctricas por ingreso neto, con un total de $271,184.17, vendiendo 92 unidades y generando 55 órdenes. Venita Daniel se encuentra en segundo lugar, con un ingreso neto de $261,795.84 y una venta de 85 unidades, además de 55 órdenes. Finalmente, Genna Serrano es el tercer vendedor, con un ingreso neto de $79,671.34, vendiendo 29 unidades y generando 19 órdenes.",
+    "sql": "SELECT staff_name AS vendedor, store_name AS tienda,\n       ROUND(SUM(net_amount), 2)  AS ingreso_neto,\n       SUM(quantity)              AS unidades,\n       COUNT(DISTINCT order_id)   AS ordenes\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC\nLIMIT 3",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "top-N",
+        "3"
+      ]
+    ],
+    "repeticion": 2
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto dinero perdimos por órdenes rechazadas de clientes de Texas?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 9.73,
+    "respuesta": "En nuestra cadena de tiendas de bicicletas, hemos perdido $86,018.94 debido a órdenes rechazadas de clientes provenientes de Texas.",
+    "sql": "SELECT \n    'Total' AS nivel, \n    'Todas' AS detalle, \n    COUNT(*) AS ordenes, \n    ROUND(SUM(net_total), 2) AS monto_neto_perdido\nFROM \n    v_orders \nWHERE \n    order_status = 3 \n    AND customer_state = 'TX'\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "estado",
+        "TX"
+      ]
+    ],
+    "repeticion": 2
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order",
+    "origen": "llm",
+    "intentos": 2,
+    "latencia_s": 8.55,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 10",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 3
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, AVG(net_total) AS promedio_gasto\nFROM v_orders\nJOIN v_order_lines ",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 15.03,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, AVG(net_total) AS promedio_gasto\nFROM v_orders\nJOIN v_order_lines ol ON ol.order_id = v_orders.order_id\nJOIN products p ON p.product_id = ol.product_id\nJOIN brands b ON b.brand_id = p.brand_id\nJOIN categories c ON c.category_id = p.category_id\nWHERE order_status = 4 AND b.brand_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY promedio_gasto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 3
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Dame el top 3 de vendedores de bicicletas eléctricas por ingreso neto",
+    "modelo": "qwen2.5:1.5b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 11.75,
+    "respuesta": "El top 3 de vendedores de bicicletas eléctricas por ingreso neto son Marcelene Boyer de Baldwin Bikes con un ingreso de $271,184.17, Venita Daniel de Baldwin Bikes con $261,795.84 y Genna Serrano de Santa Cruz Bikes con $79,671.34.",
+    "sql": "SELECT staff_name AS vendedor, store_name AS tienda,\n       ROUND(SUM(net_amount), 2)  AS ingreso_neto,\n       SUM(quantity)              AS unidades,\n       COUNT(DISTINCT order_id)   AS ordenes\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC\nLIMIT 3",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "top-N",
+        "3"
+      ]
+    ],
+    "repeticion": 3
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto dinero perdimos por órdenes rechazadas de clientes de Texas?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 9.25,
+    "respuesta": "En el período considerado, perdimos $86,018.94 por órdenes rechazadas de clientes de Texas.",
+    "sql": "SELECT \n    'Total' AS nivel, \n    'Todas' AS detalle, \n    COUNT(*) AS ordenes, \n    ROUND(SUM(net_total), 2) AS monto_neto_perdido\nFROM \n    v_orders \nWHERE \n    order_status = 3 \n    AND customer_state = 'TX'\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "estado",
+        "TX"
+      ]
+    ],
+    "repeticion": 3
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order",
+    "origen": "llm",
+    "intentos": 2,
+    "latencia_s": 8.54,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 10",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 4
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, AVG(net_total) AS promedio_gasto\nFROM v_orders\nJOIN v_order_lines ",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 15.11,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, AVG(net_total) AS promedio_gasto\nFROM v_orders\nJOIN v_order_lines ol ON ol.order_id = v_orders.order_id\nJOIN products p ON p.product_id = ol.product_id\nJOIN brands b ON b.brand_id = p.brand_id\nJOIN categories c ON c.category_id = p.category_id\nWHERE order_status = 4 AND b.brand_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY promedio_gasto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 4
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Dame el top 3 de vendedores de bicicletas eléctricas por ingreso neto",
+    "modelo": "qwen2.5:1.5b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 14.49,
+    "respuesta": "La vendedora Marcelene Boyer lidera el top 3 de vendedores de bicicletas eléctricas por ingreso neto, con un total de $271,184.17. Su tienda de origen es Baldwin Bikes, donde vendió 92 unidades y recibió 55 órdenes. Por otro lado, Venita Daniel se encuentra en segundo lugar con un ingreso neto de $261,795.84, vendiendo 85 unidades y 55 órdenes. Finalmente, Genna Serrano es el tercer lugar en la clasificación, con un ingreso neto de $79,671.34, vendiendo 29 unidades y 19 órdenes.",
+    "sql": "SELECT staff_name AS vendedor, store_name AS tienda,\n       ROUND(SUM(net_amount), 2)  AS ingreso_neto,\n       SUM(quantity)              AS unidades,\n       COUNT(DISTINCT order_id)   AS ordenes\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC\nLIMIT 3",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "top-N",
+        "3"
+      ]
+    ],
+    "repeticion": 4
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto dinero perdimos por órdenes rechazadas de clientes de Texas?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 8.43,
+    "respuesta": "Por las órdenes rechazadas de clientes de Texas, perdemos un total de $86,018.94.",
+    "sql": "SELECT \n    'Total' AS nivel, \n    'Todas' AS detalle, \n    COUNT(*) AS ordenes, \n    ROUND(SUM(net_total), 2) AS monto_neto_perdido\nFROM \n    v_orders \nWHERE \n    order_status = 3 \n    AND customer_state = 'TX'\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "estado",
+        "TX"
+      ]
+    ],
+    "repeticion": 4
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order",
+    "origen": "llm",
+    "intentos": 2,
+    "latencia_s": 8.91,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 10",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 5
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": false,
+    "motivo": "error: Execution failed on sql 'SELECT store_name AS tienda, AVG(net_total) AS promedio_gasto\nFROM v_orders\nJOIN v_order_lines ",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 15.48,
+    "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
+    "sql": "SELECT store_name AS tienda, AVG(net_total) AS promedio_gasto\nFROM v_orders\nJOIN v_order_lines ol ON ol.order_id = v_orders.order_id\nJOIN products p ON p.product_id = ol.product_id\nJOIN brands b ON b.brand_id = p.brand_id\nJOIN categories c ON c.category_id = p.category_id\nWHERE order_status = 4 AND b.brand_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY promedio_gasto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 5
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Dame el top 3 de vendedores de bicicletas eléctricas por ingreso neto",
+    "modelo": "qwen2.5:1.5b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 10.78,
+    "respuesta": "El top 3 de vendedores de bicicletas eléctricas por ingreso neto son Marcelene Boyer de Baldwin Bikes con $271,184.17, Venita Daniel de Baldwin Bikes con $261,795.84 y Genna Serrano de Santa Cruz Bikes con $79,671.34.",
+    "sql": "SELECT staff_name AS vendedor, store_name AS tienda,\n       ROUND(SUM(net_amount), 2)  AS ingreso_neto,\n       SUM(quantity)              AS unidades,\n       COUNT(DISTINCT order_id)   AS ordenes\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC\nLIMIT 3",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "top-N",
+        "3"
+      ]
+    ],
+    "repeticion": 5
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto dinero perdimos por órdenes rechazadas de clientes de Texas?",
+    "modelo": "qwen2.5:1.5b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 8.6,
+    "respuesta": "En la consulta ejecutada, encontramos que perdimos $86,018.94 en dinero neto debido a órdenes rechazadas de clientes de Texas.",
+    "sql": "SELECT \n    'Total' AS nivel, \n    'Todas' AS detalle, \n    COUNT(*) AS ordenes, \n    ROUND(SUM(net_total), 2) AS monto_neto_perdido\nFROM \n    v_orders \nWHERE \n    order_status = 3 \n    AND customer_state = 'TX'\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "estado",
+        "TX"
+      ]
+    ],
+    "repeticion": 5
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "llama3.2:1b",
+    "ok": false,
+    "motivo": "filas: esperadas 3, obtenidas 1",
+    "origen": "llm",
+    "intentos": 1,
+    "latencia_s": 28.34,
+    "respuesta": "$1,370.01",
+    "sql": "SELECT \n  s.store_name AS tienda,\n  ROUND(SUM(net_amount) / COUNT(*), 2) AS ingreso_neto\nFROM \n  v_order_lines vl\n  JOIN v_orders v ON vl.order_id = v.order_id\n  JOIN stocks st ON vl.product_id = st.product_id\n  JOIN products p ON st.product_id = p.product_id\n  JOIN stores s ON st.store_id = s.store_id\nWHERE \n  v.order_status = 4\n  AND s.store_name = 'Baldwin Bikes'\n  AND strftime('%Y', vl.order_date) = '2016'\nGROUP BY \n  s.store_name\nORDER BY \n  ingreso_neto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "llama3.2:1b",
+    "ok": false,
+    "motivo": "filas: esperadas 3, obtenidas 1",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 27.86,
+    "respuesta": "La respuesta es: 1,804.28",
+    "sql": "SELECT \n  s.store_name AS tienda,\n  SUM(ol.list_price * ol.quantity) AS total_gasto,\n  COUNT(DISTINCT o.customer_id) AS clientes,\n  ROUND(AVG(ol.list_price * ol.quantity), 2) AS ticket_promedio\nFROM \n  v_order_lines ol\n  JOIN v_order_lines o ON ol.order_id = o.order_id\n  JOIN products p ON ol.product_id = p.product_id\n  JOIN stores s ON o.store_id = s.store_id\nWHERE \n  o.order_status = 4\nGROUP BY \n  s.store_name\nORDER BY \n  ticket_promedio DESC\nLIMIT 1",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Dame el top 3 de vendedores de bicicletas eléctricas por ingreso neto",
+    "modelo": "llama3.2:1b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 12.42,
+    "respuesta": "1. $79,671.34\n2. $261,795.84\n3. $271,184.17",
+    "sql": "SELECT ROUND(SUM(net_amount), 2) AS ingreso_neto,\n       staff_name AS vendedor\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC\nLIMIT 3",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "top-N",
+        "3"
+      ]
+    ],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto dinero perdimos por órdenes rechazadas de clientes de Texas?",
+    "modelo": "llama3.2:1b",
+    "ok": false,
+    "motivo": "fila de referencia 1 no encontrada: [86018.94]",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 29.64,
+    "respuesta": "No se encontraron registros para esa consulta.",
+    "sql": "SELECT * FROM v_orders\nWHERE order_status = 3 AND strftime('%Y', order_date) = '2017'\n  AND strftime('%Y', customer_city) = 'TX'\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "estado",
+        "TX"
+      ]
+    ],
+    "repeticion": 1
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Por tienda, ¿cuál es el ingreso neto de Electric Bikes dividido entre el número de órdenes que lo incluyen?",
+    "modelo": "llama3.2:1b",
+    "ok": false,
+    "motivo": "filas: esperadas 3, obtenidas 1",
+    "origen": "llm",
+    "intentos": 1,
+    "latencia_s": 29.73,
+    "respuesta": "$1,370.01",
+    "sql": "SELECT \n  s.store_name AS tienda,\n  ROUND(SUM(net_amount) / COUNT(*), 2) AS ingreso_neto\nFROM \n  v_order_lines vl\n  JOIN v_orders v ON vl.order_id = v.order_id\n  JOIN stocks st ON vl.product_id = st.product_id\n  JOIN products p ON st.product_id = p.product_id\n  JOIN stores s ON st.store_id = s.store_id\nWHERE \n  v.order_status = 4\n  AND s.store_name = 'Baldwin Bikes'\n  AND strftime('%Y', vl.order_date) = '2016'\nGROUP BY \n  s.store_name\nORDER BY \n  ingreso_neto DESC\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [],
+    "repeticion": 2
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto gastan en promedio por orden los clientes de Electric Bikes en cada tienda?",
+    "modelo": "llama3.2:1b",
+    "ok": false,
+    "motivo": "filas: esperadas 3, obtenidas 1",
+    "origen": "llm_anclada",
+    "intentos": 2,
+    "latencia_s": 29.72,
+    "respuesta": "La respuesta es $1,804,28.",
+    "sql": "SELECT \n  s.store_name AS tienda,\n  SUM(ol.list_price * ol.quantity) AS total_gasto,\n  COUNT(DISTINCT o.customer_id) AS clientes,\n  ROUND(AVG(ol.list_price * ol.quantity), 2) AS ticket_promedio\nFROM \n  v_order_lines ol\n  JOIN v_order_lines o ON ol.order_id = o.order_id\n  JOIN products p ON ol.product_id = p.product_id\n  JOIN stores s ON o.store_id = s.store_id\nWHERE \n  o.order_status = 4\nGROUP BY \n  s.store_name\nORDER BY \n  ticket_promedio DESC\nLIMIT 1",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "categoria",
+        "Electric Bikes"
+      ]
+    ],
+    "repeticion": 2
+  },
+  {
+    "id": "D3*",
+    "pregunta": "Dame el top 3 de vendedores de bicicletas eléctricas por ingreso neto",
+    "modelo": "llama3.2:1b",
+    "ok": true,
+    "motivo": "ok",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 12.27,
+    "respuesta": "1. $79,671.34\n2. $261,795.84\n3. $271,184.17",
+    "sql": "SELECT ROUND(SUM(net_amount), 2) AS ingreso_neto,\n       staff_name AS vendedor\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC\nLIMIT 3",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "top-N",
+        "3"
+      ]
+    ],
+    "repeticion": 2
+  },
+  {
+    "id": "D3*",
+    "pregunta": "¿Cuánto dinero perdimos por órdenes rechazadas de clientes de Texas?",
+    "modelo": "llama3.2:1b",
+    "ok": false,
+    "motivo": "fila de referencia 1 no encontrada: [86018.94]",
+    "origen": "llm_anclada",
+    "intentos": 1,
+    "latencia_s": 39.04,
+    "respuesta": "No se encontraron registros para esa consulta.",
+    "sql": "SELECT * FROM v_orders\nWHERE order_status = 3 AND strftime('%Y', order_date) = '2017'\n  AND strftime('%Y', customer_city) = 'TX'\nLIMIT 500",
+    "filtros": {},
+    "no_soportados": [
+      [
+        "estado",
+        "TX"
+      ]
+    ],
+    "repeticion": 2
+  }
+]

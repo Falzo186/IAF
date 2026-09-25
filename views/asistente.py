@@ -226,7 +226,7 @@ def render_result(r: se.QueryResult) -> None:
         st.dataframe(r.df, hide_index=True, width="stretch", height=min(38 * (len(r.df) + 1) + 3, 320),
                      column_config=charts.column_config(r.df))
     total = sum(r.timings.values())
-    engine = "sin LLM" if r.source == "verificada" and total < 1 else r.model
+    engine = "sin LLM" if r.source in ("verificada", "solo_lectura") and total < 1 else r.model
     st.caption(f"{'<0.1' if total < 0.1 else f'{total:.1f}'} s · {engine}")
 
 

@@ -13,3 +13,6 @@ logs/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Temporales de la grabación del video de respaldo
+demo/_video_tmp/
