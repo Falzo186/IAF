@@ -1,0 +1,61 @@
+{
+  "necesidad_id": "N02_riesgo_quiebre_stock",
+  "pregunta": "¿Qué productos se venden mucho pero están a punto de agotarse?",
+  "modelo": "qwen2.5:1.5b",
+  "sql_generada": "SELECT p.product_name AS producto, st.quantity AS stock, st.quantity - (SELECT SUM(quantity) FROM v_order_lines WHERE order_status = 4 AND product_id = p.product_id) AS stock_disponible\nFROM products p\nJOIN stocks st ON st.product_id = p.product_id\nWHERE st.quantity < (SELECT SUM(quantity) FROM v_order_lines WHERE order_status = 4 AND product_id = p.product_id)\nORDER BY stock_disponible DESC\nLIMIT 10",
+  "filas": [
+    {
+      "producto": "Trek Remedy 9.8 - 2017",
+      "stock": 21,
+      "stock_disponible": -1
+    },
+    {
+      "producto": "Trek Domane S 5 Disc - 2017",
+      "stock": 22,
+      "stock_disponible": -1
+    },
+    {
+      "producto": "Trek Domane SLR 8 Disc - 2018",
+      "stock": 1,
+      "stock_disponible": -1
+    },
+    {
+      "producto": "Trek Domane SL 6 - 2018",
+      "stock": 3,
+      "stock_disponible": -1
+    },
+    {
+      "producto": "Trek CrossRip+ - 2018",
+      "stock": 1,
+      "stock_disponible": -1
+    },
+    {
+      "producto": "Electra Townie Original 3i EQ Ladies' - 2018",
+      "stock": 0,
+      "stock_disponible": -1
+    },
+    {
+      "producto": "Electra Townie Commute Go! - 2018",
+      "stock": 2,
+      "stock_disponible": -1
+    },
+    {
+      "producto": "Electra Townie Original 1 - 2018",
+      "stock": 0,
+      "stock_disponible": -1
+    },
+    {
+      "producto": "Surly Ogre Frameset - 2017",
+      "stock": 19,
+      "stock_disponible": -1
+    },
+    {
+      "producto": "Sun Bicycles Streamway - 2017",
+      "stock": 26,
+      "stock_disponible": -1
+    }
+  ],
+  "respuesta_lenguaje_natural": "Los productos que se venden mucho pero están a punto de agotarse son:\n\n1. Trek Remedy 9.8 - 2017: 21 unidad(s) en stock, disponible(s) en 1 unidad(s).\n2. Trek Domane S 5 Disc - 2017: 22 unidad(s) en stock, disponible(s) en 1 unidad(s).\n3. Trek Domane SLR 8 Disc - 2018: 1 unidad(s) en stock, disponible(s) en 0 unidad(s).\n4. Trek Domane SL 6 - 2018: 3 unidad(s) en stock, disponible(s) en 0 unidad(s).\n5. Trek CrossRip+ - 2018: 1 unidad(s) en stock, disponible(s) en 0 unidad(s).\n6. Electra Townie Original 3i EQ Ladies' - 2018: 0 unidad(s) en stock, disponible(s) en 0 unidad(s).\n7. Electra Townie Commute Go! - 2018: 2 unidad(s) en stock, disponible(s) en 0",
+  "tiempo_segundos": 27.18,
+  "generado_en": "2026-09-26T11:06:44"
+}

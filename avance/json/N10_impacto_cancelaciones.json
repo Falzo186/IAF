@@ -1,0 +1,14 @@
+{
+  "necesidad_id": "N10_impacto_cancelaciones",
+  "pregunta": "¿Cuánto ingreso se perdió por órdenes rechazadas?",
+  "modelo": "qwen2.5:1.5b",
+  "sql_generada": "SELECT ROUND(SUM(discount_amount), 2) AS ingreso_perdido\nFROM v_order_lines\nWHERE order_status = 3\nLIMIT 500",
+  "filas": [
+    {
+      "ingreso_perdido": 23219.9
+    }
+  ],
+  "respuesta_lenguaje_natural": "El resultado (ingreso perdido) es $23,219.90.",
+  "tiempo_segundos": 2.86,
+  "generado_en": "2026-09-26T11:07:07"
+}

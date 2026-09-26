@@ -1,0 +1,15 @@
+{
+  "necesidad_id": "N08_ticket_promedio_sucursal",
+  "pregunta": "¿Cuál es el ticket promedio por tienda?",
+  "modelo": "qwen2.5:1.5b",
+  "sql_generada": "SELECT store_name AS tienda, AVG(net_amount) AS ticket_promedio\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY store_name\nORDER BY ticket_promedio DESC\nLIMIT 1",
+  "filas": [
+    {
+      "tienda": "Rowlett Bikes",
+      "ticket_promedio": 1637.851575174
+    }
+  ],
+  "respuesta_lenguaje_natural": "El ticket promedio por tienda en Rowlett Bikes es de $1,637.85.",
+  "tiempo_segundos": 6.45,
+  "generado_en": "2026-09-26T11:07:04"
+}
