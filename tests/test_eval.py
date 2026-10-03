@@ -86,3 +86,78 @@ def test_oracle_run_scores_everything(tmp_path):
     assert all(r["fuente"] == "verificada" for r in full_biz)
     report = ev.build_report(results, ["oraculo"], ["llm", "full"], {}, "t")
     assert "| oraculo | solo LLM | 10/10 | 10/10 |" in report
+
+
+# --- Clasificador de fallas (fase 7) --------------------------------------------------
+
+def failing_llm(sql):
+    """LLM falso que siempre responde con la misma SQL (también en el reintento)."""
+    return lambda model, messages, **_: f"```sql\n{sql}\n```"
+
+
+def run_failing(item_id, sql):
+    return ev.run_item(ITEMS[item_id], "falso", "llm", failing_llm(sql), {})
+
+
+@pytest.mark.parametrize("item_id, sql, category", [
+    # Función que SQLite no tiene
+    ("B1", "SELECT CONTAR(*) FROM customers WHERE state = 'NY'", "error_ejecucion"),
+    # El validador la rechaza (operación no permitida)
+    ("B1", "DELETE FROM customers", "error_ejecucion"),
+    # category_name no existe en v_orders
+    ("B6", "SELECT category_name, SUM(net_total) FROM v_orders WHERE order_status = 4 GROUP BY category_name",
+     "tabla_columna_inexistente"),
+    # Tabla que no existe (la rechaza el validador)
+    ("B1", "SELECT COUNT(*) FROM clientes WHERE state = 'NY'", "tabla_columna_inexistente"),
+    # Promedia por línea y no por orden: devuelve una sola fila en vez de una por tienda
+    ("N8", "SELECT ROUND(AVG(net_amount), 2) AS ticket_promedio FROM v_order_lines WHERE order_status = 4",
+     "agregacion_incorrecta"),
+    # Agrupa por producto cuando se pedía un total
+    ("B2", "SELECT product_name, SUM(net_amount) FROM v_order_lines WHERE order_status = 4 "
+           "AND strftime('%Y', order_date) = '2017' GROUP BY product_name", "agregacion_incorrecta"),
+    # Misma forma, estado equivocado
+    ("B2", "SELECT ROUND(SUM(net_amount), 2) FROM v_order_lines WHERE order_status = 3 "
+           "AND strftime('%Y', order_date) = '2017'", "filtro_incorrecto"),
+    # Misma forma, año equivocado
+    ("B2", "SELECT ROUND(SUM(net_amount), 2) FROM v_order_lines WHERE order_status = 4 "
+           "AND strftime('%Y', order_date) = '2016'", "filtro_incorrecto"),
+    # Mismo filtro, otro resultado (no cae en ninguna categoría)
+    ("B1", "SELECT COUNT(*) AS clientes FROM customers WHERE state = 'NY' AND customer_id > 10", "otro"),
+])
+def test_failure_categories(item_id, sql, category):
+    res = run_failing(item_id, sql)
+    assert not res["ok"]
+    assert res["fallo_categoria"] == category, res["fallo_detalle"]
+    assert res["fallo_detalle"]
+
+
+def test_correct_answers_are_not_classified():
+    res = run_failing("B1", ITEMS["B1"]["sql"])
+    assert res["ok"] and res["fallo_categoria"] is None
+
+
+def test_priority_error_wins_over_other_categories():
+    """Si no se ejecuta no hay resultado que comparar: manda el error, aunque el filtro también esté mal."""
+    res = run_failing("B2", "SELECT SUM(category_name) FROM v_orders WHERE order_status = 3")
+    assert res["fallo_categoria"] == "tabla_columna_inexistente"
+
+
+def test_failure_table_in_report():
+    results = [run_failing("B1", "SELECT CONTAR(*) FROM customers"),
+               run_failing("B6", "SELECT category_name FROM v_orders"),
+               run_failing("B2", "SELECT ROUND(SUM(net_amount), 2) FROM v_order_lines WHERE order_status = 3 "
+                                 "AND strftime('%Y', order_date) = '2017'")]
+    report = ev.build_report(results, ["falso"], ["llm"], {}, "t")
+    assert "## Categorías de falla" in report
+    assert "| `error_ejecucion` | 1 | 1 |" in report
+    assert "| `otro` | 0 | 0 |" in report and "(sin casos)" in report
+    assert ITEMS["B1"]["pregunta"] in report  # ejemplo real: pregunta + SQL generada
+    assert "CONTAR" in report
+
+
+def test_reclassify_stored_results():
+    stored = {"id": "B6", "ok": False, "motivo": "x", "sql": "SELECT category_name FROM v_orders"}
+    out = ev.reclassify_stored(stored, ITEMS["B6"], {})
+    assert out["fallo_categoria"] == "tabla_columna_inexistente"
+    ok = ev.reclassify_stored({"id": "B1", "ok": True, "motivo": "ok", "sql": None}, ITEMS["B1"], {})
+    assert ok["fallo_categoria"] is None

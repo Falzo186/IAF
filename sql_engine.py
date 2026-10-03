@@ -213,6 +213,22 @@ FEW_SHOTS: list[tuple[str, str]] = [
     ),
 ]
 
+def load_fewshot_candidates(path: Path | None = None) -> list[tuple[str, str]]:
+    """Candidatos a few-shot marcados con review_patterns.py (fewshot_candidates.json).
+
+    NO son aprendizaje automático ni se usan en el prompt: build_system_prompt solo lee FEW_SHOTS.
+    Es una lista de revisión; si el equipo decide usar un candidato, lo mueve a mano a FEW_SHOTS.
+    """
+    import json
+    path = Path(path or config.FEWSHOT_CANDIDATES_PATH)
+    try:
+        return [(c["pregunta"], c["sql"]) for c in json.loads(path.read_text(encoding="utf-8"))]
+    except (OSError, ValueError, KeyError, TypeError):
+        return []
+
+
+FEWSHOT_CANDIDATES: list[tuple[str, str]] = load_fewshot_candidates()
+
 SYSTEM_PROMPT_TEMPLATE = """Eres un experto en SQL que responde preguntas de negocio sobre la base Bike Stores.
 
 Esquema:
@@ -232,8 +248,54 @@ Ejemplos:
 {examples}"""
 
 
-def build_system_prompt(db_path: Path = config.DB_PATH) -> str:
+CONTEXT_LEVELS = ("sin_contexto", "actual", "describe_completo")
+
+
+@lru_cache(maxsize=4)
+def _describe_context_cached(db_path: str) -> str:
+    """Esquema tipo DESCRIBE: PRAGMA table_info + foreign_key_list de cada tabla y vista."""
+    conn = _ro_connect(Path(db_path))
+    try:
+        names = [(n, t) for n, t in conn.execute(
+            "SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view') "
+            "AND name NOT LIKE 'sqlite_%' ORDER BY type DESC, name")]
+        blocks = []
+        for name, kind in names:
+            lines = [f"{'VIEW' if kind == 'view' else 'TABLE'} {name}"]
+            for _, col, ctype, notnull, default, pk in conn.execute(f"PRAGMA table_info({name})"):
+                parts = [f"  {col}", ctype or "(sin tipo)"]
+                if pk:
+                    parts.append("PRIMARY KEY")
+                if notnull:
+                    parts.append("NOT NULL")
+                if default is not None:
+                    parts.append(f"DEFAULT {default}")
+                lines.append(" ".join(parts))
+            for _, _, ref_table, from_col, to_col, *_ in conn.execute(f"PRAGMA foreign_key_list({name})"):
+                lines.append(f"  FOREIGN KEY ({from_col}) REFERENCES {ref_table}({to_col})")
+            blocks.append("\n".join(lines))
+        return "\n\n".join(blocks)
+    finally:
+        conn.close()
+
+
+def get_schema_context_level(level: str = "actual", db_path: Path = config.DB_PATH) -> str:
+    """Bloque de esquema del prompt. "actual" es el de producción; los otros son del experimento
+    de contexto (context_experiment.py) y no se usan en el chat."""
+    key = str(Path(db_path).resolve())
+    if level == "actual":
+        return _schema_context_cached(key)[0]
+    if level == "sin_contexto":
+        return "Tablas y vistas: " + ", ".join(sorted(_db_objects(key)))
+    if level == "describe_completo":
+        return _describe_context_cached(key)
+    raise ValueError(f"context_level desconocido: {level!r} (opciones: {', '.join(CONTEXT_LEVELS)})")
+
+
+def build_system_prompt(db_path: Path = config.DB_PATH, context_level: str = "actual") -> str:
     schema, ref_date, _ = _schema_context_cached(str(Path(db_path).resolve()))
+    if context_level != "actual":
+        schema = get_schema_context_level(context_level, db_path)
     examples = "\n\n".join(f"Pregunta: {q}\n```sql\n{sql}\n```" for q, sql in FEW_SHOTS)
     return SYSTEM_PROMPT_TEMPLATE.format(schema=schema, reference_date=ref_date, examples=examples)
 

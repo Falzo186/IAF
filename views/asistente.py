@@ -11,6 +11,7 @@ import pandas as pd
 import streamlit as st
 
 import config
+import learned_patterns
 import ollama_manager
 import pull_log
 import warmup
@@ -269,6 +270,7 @@ if question:
         with st.status("Generando consulta…", expanded=False) as box:
             t0 = time.perf_counter()
             result = se.answer_question(question, model, ss["history"], llm=llm, synthesize_answer=False)
+            learned_patterns.log_pattern(result)  # bitácora para revisión humana; no afecta la respuesta
             if result.error is None and result.df is not None:
                 t1 = time.perf_counter()
                 if result.source == "verificada" and not (ss["ai_writing"] and status["up"]):

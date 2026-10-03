@@ -19,3 +19,6 @@ demo/_video_tmp/
 
 # PDFs generados por reference_report.py
 reportes/
+
+# Bitácora local de patrones (fase 7): se revisa con review_patterns.py
+learned_patterns.jsonl

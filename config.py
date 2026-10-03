@@ -12,6 +12,11 @@ BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data" / "bike_stores"
 DB_PATH = BASE_DIR / "bikestores.db"
 
+# Bitácora de patrones y candidatos a few-shot (fase 7): solo para revisión humana.
+LEARNED_PATTERNS_PATH = BASE_DIR / "learned_patterns.jsonl"
+FEWSHOT_CANDIDATES_PATH = BASE_DIR / "fewshot_candidates.json"
+REVIEWED_PATTERNS_PATH = BASE_DIR / "learned_patterns_reviewed.json"
+
 # --- LLM local (Ollama) ------------------------------------------------------
 # 127.0.0.1 y no "localhost": en Windows, "localhost" prueba primero IPv6 (::1) y, como Ollama
 # solo escucha en IPv4, cada conexión nueva esperaba ~2 s antes de caer a 127.0.0.1 (medido).

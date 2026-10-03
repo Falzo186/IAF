@@ -1,8 +1,8 @@
 # Resultados de la evaluación Text-to-SQL
 
-- Fecha: 2026-09-24 11:40
-- Equipo: Windows-11-10.0.26200-SP0 · Python 3.14.0
-- Ollama: http://localhost:11434
+- Fecha: 2026-10-03 16:50
+- Equipo: Windows-11-10.0.26200-SP0 · Python 3.12.5
+- Ollama: http://127.0.0.1:11434
 - Exactitud por ejecución (ver `eval_text2sql.py`). *Latencia SQL* = enrutar + generar + validar + ejecutar. *Respuesta completa* = lo que espera el usuario (incluye la síntesis); solo se mide en el modo sistema completo.
 
 ## Resumen
@@ -20,6 +20,28 @@
 
 - Básico, solo LLM >= 8/10: **9/10** CUMPLE
 - Negocio, sistema completo = 10/10: **10/10** CUMPLE
+
+## Categorías de falla
+
+Solo se clasifican los ítems incorrectos (los aciertos no se reclasifican). Orden: `error_ejecucion` (la consulta no se ejecutó), `tabla_columna_inexistente` (el error nombra una tabla o columna fuera del esquema), `agregacion_incorrecta` (se ejecuta, pero la forma del resultado o las agregaciones no coinciden con la referencia), `filtro_incorrecto` (mismo nivel de agregación, otro estado, fecha o nombre) y `otro`.
+
+| Categoría | qwen2.5:1.5b · solo LLM | qwen2.5:1.5b · sistema completo | llama3.2:1b · solo LLM | llama3.2:1b · sistema completo | deepseek-r1:1.5b · solo LLM | deepseek-r1:1.5b · sistema completo | Total |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `error_ejecucion` | 1 | 0 | 4 | 2 | 13 | 6 | 26 |
+| `tabla_columna_inexistente` | 4 | 2 | 5 | 1 | 8 | 5 | 25 |
+| `agregacion_incorrecta` | 6 | 0 | 6 | 2 | 1 | 1 | 16 |
+| `filtro_incorrecto` | 0 | 0 | 3 | 2 | 1 | 0 | 6 |
+| `otro` | 2 | 0 | 0 | 0 | 1 | 1 | 4 |
+
+### Un ejemplo real por categoría
+
+| Categoría | Modelo · modo | Ítem | Pregunta | SQL generada | Detalle |
+|---|---|---|---|---|---|
+| `error_ejecucion` | qwen2.5:1.5b · solo LLM | A2 | ¿Qué productos de la marca Trek nos cuestan más en descuentos? | `SELECT brand_name AS marca, product_name AS producto, list_price AS precio, discount_amount AS descuento FROM v_order_lines JOIN products ON products.product_id = v_order_lines.product_id JOIN brands ON brands.brand_id =` | ambiguous column name: brand_name |
+| `tabla_columna_inexistente` | qwen2.5:1.5b · solo LLM | B7 | ¿Cuántas unidades hay en inventario en cada tienda? | `SELECT store_name AS tienda, product_name AS producto, SUM(quantity) AS unidades FROM stocks JOIN products ON stocks.product_id = products.product_id GROUP BY tienda, producto ORDER BY tienda, producto` | no such column: store_name |
+| `agregacion_incorrecta` | qwen2.5:1.5b · solo LLM | N4 | ¿En qué ciudades se concentran las compras hechas con el menor descuento? | `SELECT customer_city, ROUND(SUM(discount_amount), 2) AS descuento_total FROM v_order_lines WHERE order_status = 4 GROUP BY customer_city ORDER BY descuento_total ASC LIMIT 5` | agregación (('Sum',), 1) contra referencia (('Avg', 'Min', 'Sum', 'Sum', 'Sum'), 2) |
+| `filtro_incorrecto` | llama3.2:1b · solo LLM | B10 | ¿Cuál es el precio de lista promedio de los productos de la marca Trek? | `SELECT    AVG(list_price * quantity) AS precio_promedio FROM    v_order_lines WHERE    brand_name = 'Trek'   AND strftime('%Y', order_date) = '2016'   AND strftime('%Y-%m', order_date) IN (     SELECT        strftime('%Y` | filtros distintos: faltan [], sobran ['estado=4', 'fecha=2016'] |
+| `otro` | qwen2.5:1.5b · solo LLM | N3 | ¿Quiénes son nuestros mejores vendedores de bicicletas eléctricas? | `SELECT staff_name AS vendedor, COUNT(*) AS ventas, SUM(net_amount) AS ingreso_neto FROM v_order_lines JOIN staffs ON staffs.staff_id = v_order_lines.staff_id WHERE order_status = 4 AND brand_name = 'Electric Bikes' GROUP` | filas: esperadas 6, obtenidas 0 |
 
 ## Detalle
 

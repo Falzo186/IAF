@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import json
 import platform
+import re
 import statistics
 import sys
 import time
@@ -33,6 +34,8 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
+import sqlglot
+from sqlglot import exp
 
 import config
 import sql_engine as se
@@ -110,6 +113,104 @@ def compare_results(ref: pd.DataFrame, got: pd.DataFrame | None, check: dict) ->
 
 
 # ---------------------------------------------------------------------------
+# Clasificación de fallas (fase 7)
+# ---------------------------------------------------------------------------
+
+FAILURE_CATEGORIES = ["error_ejecucion", "tabla_columna_inexistente", "agregacion_incorrecta",
+                      "filtro_incorrecto", "otro"]
+
+# Mensajes de SQLite ("no such column: x") y del validador ("La tabla o vista 'x' no existe.").
+_MISSING_OBJECT_RE = re.compile(
+    r"no such (?:table|column)|has no column named|no existe|unknown (?:table|column)", re.IGNORECASE)
+_STATUS_RE = re.compile(r"order_status\s*(?:=|<>|!=|\bin\b)\s*\(?\s*([\d\s,]+)", re.IGNORECASE)
+_DATE_RE = re.compile(r"(?<!\d)(20\d{2}(?:-\d{2}){0,2})")
+_STRING_RE = re.compile(r"'([^']*)'")
+
+
+def _filter_signature(sql: str) -> set[str]:
+    """Estado, fechas y nombres comparados en la SQL: lo que hace de la consulta "otro filtro"."""
+    sig = set()
+    for m in _STATUS_RE.finditer(sql):
+        sig |= {f"estado={n}" for n in re.findall(r"\d+", m.group(1))}
+    for lit in _STRING_RE.findall(sql):
+        if "%" in lit and not _DATE_RE.search(lit):
+            continue  # formato de strftime
+        sig |= {f"fecha={d}" for d in _DATE_RE.findall(lit)} or {f"texto={lit.casefold()}"}
+    return sig
+
+
+def _aggregation_signature(sql: str) -> tuple | None:
+    """(funciones de agregación con DISTINCT, nº de expresiones GROUP BY), o None si no se parsea."""
+    try:
+        tree = sqlglot.parse_one(sql, read="sqlite")
+    except sqlglot.errors.SqlglotError:
+        return None
+    aggs = sorted(f"{type(a).__name__}{'(DISTINCT)' if a.find(exp.Distinct) else ''}"
+                  for a in tree.find_all(exp.AggFunc))
+    group = tree.args.get("group")
+    return tuple(aggs), len(group.expressions) if group else 0
+
+
+def classify_failure(item: dict, ref: pd.DataFrame, got: pd.DataFrame | None, got_sql: str | None,
+                     error: str | None, reason: str) -> tuple[str, str]:
+    """Categoría y detalle de una respuesta incorrecta (no se llama con los aciertos).
+
+    Orden: (1) la consulta no se ejecutó -> "tabla_columna_inexistente" si el error nombra una
+    tabla o columna que no existe, si no "error_ejecucion"; (2) se ejecutó pero el nivel de
+    agregación no coincide con el de la referencia -> "agregacion_incorrecta"; (3) misma forma
+    pero otro estado, fecha o nombre -> "filtro_incorrecto"; (4) "otro", con el motivo.
+    """
+    if error:
+        short = error.rsplit("': ", 1)[-1]  # SQLite repite toda la SQL antes del mensaje
+        if _MISSING_OBJECT_RE.search(error):
+            return "tabla_columna_inexistente", short
+        return "error_ejecucion", short
+    if got is None:
+        return "otro", reason
+
+    check = item["check"]
+    n_cols = len(check.get("key_columns") or ref.columns)
+    exact = check.get("mode", "exact") == "exact"
+    min_rows = len(ref) if exact else min(check.get("k", 1), len(ref))
+    # Un resultado vacío no habla del nivel de agregación sino de un filtro que no deja pasar nada.
+    if len(got) and (got.shape[1] < n_cols or (exact and len(got) != len(ref))
+                     or (not exact and len(got) < min_rows)):
+        return "agregacion_incorrecta", (
+            f"forma {got.shape[0]}x{got.shape[1]} contra referencia {len(ref)}x{n_cols}")
+    if got_sql:
+        ref_agg, got_agg = _aggregation_signature(item["sql"]), _aggregation_signature(got_sql)
+        if len(got) and ref_agg and got_agg and ref_agg != got_agg:
+            return "agregacion_incorrecta", f"agregación {got_agg} contra referencia {ref_agg}"
+        ref_f, got_f = _filter_signature(item["sql"]), _filter_signature(got_sql)
+        if ref_f != got_f:
+            return "filtro_incorrecto", (
+                f"filtros distintos: faltan {sorted(ref_f - got_f)}, sobran {sorted(got_f - ref_f)}")
+    return "otro", reason
+
+
+def reclassify_stored(result: dict, item: dict, ref_cache: dict) -> dict:
+    """Clasifica un resultado guardado (sin Ollama): vuelve a ejecutar su SQL, que es determinista."""
+    if item["id"] not in ref_cache:
+        ref_cache[item["id"]] = se.execute_sql(se.validate_sql(item["sql"]))
+    result.pop("fallo_categoria", None)
+    result.pop("fallo_detalle", None)
+    if result["ok"]:
+        result["fallo_categoria"] = None
+        return result
+    got, error = None, None
+    try:
+        if not result.get("sql"):
+            raise se.SQLValidationError(str(result["motivo"]))
+        got = se.execute_sql(se.validate_sql(result["sql"]))
+    except Exception as exc:  # noqa: BLE001 - todo error de ejecución es una categoría
+        error = str(exc)
+    cat, detail = classify_failure(item, ref_cache[item["id"]], got, result.get("sql"), error,
+                                   str(result["motivo"]))
+    result["fallo_categoria"], result["fallo_detalle"] = cat, detail
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Ejecución
 # ---------------------------------------------------------------------------
 
@@ -133,12 +234,16 @@ def run_item(item: dict, model: str, mode: str, llm, ref_cache: dict) -> dict:
     r = se.answer_question(item["pregunta"], model, llm=llm, use_router=full, synthesize_answer=full)
     total = time.perf_counter() - t0
     ok, reason = (False, r.error or "error") if r.error else compare_results(ref, r.df, item["check"])
+    category = detail = None
+    if not ok:  # los aciertos no se reclasifican
+        category, detail = classify_failure(item, ref, r.df, r.sql, r.error, reason)
     return {
         "id": item["id"], "nivel": item["nivel"], "modelo": model, "modo": mode,
         "ok": ok, "motivo": reason, "fuente": r.source, "consulta_verificada": r.business_query_id,
         "intentos": r.attempts, "latencia_s": round(total - r.timings["synth"], 2),
         "latencia_total_s": round(total, 2) if full else None,
         "sql": r.sql, "respuesta": r.answer if full else None,
+        "fallo_categoria": category, "fallo_detalle": detail,
     }
 
 
@@ -174,6 +279,44 @@ def percentile(values: list[float], q: float) -> float:
 def _score(rows: list[dict], level: str) -> str:
     subset = [r for r in rows if r["nivel"] == level]
     return f"{sum(r['ok'] for r in subset)}/{len(subset)}" if subset else "-"
+
+
+def failure_table(results: list[dict], models: list[str], modes: list[str],
+                  questions: dict | None = None) -> list[str]:
+    """Sección "Categorías de falla": conteo por categoría x modelo x modo y un ejemplo real."""
+    failed = [r for r in results if not r["ok"] and r.get("fallo_categoria")]
+    if not failed:
+        return []
+    cells = [(m, mode) for m in models for mode in modes if any(
+        r["modelo"] == m and r["modo"] == mode for r in results)]
+    questions = questions or {it["id"]: it["pregunta"] for it in load_golden()}
+    out = ["", "## Categorías de falla", "",
+           "Solo se clasifican los ítems incorrectos (los aciertos no se reclasifican). Orden: "
+           "`error_ejecucion` (la consulta no se ejecutó), `tabla_columna_inexistente` (el error nombra "
+           "una tabla o columna fuera del esquema), `agregacion_incorrecta` (se ejecuta, pero la forma del "
+           "resultado o las agregaciones no coinciden con la referencia), `filtro_incorrecto` (mismo nivel "
+           "de agregación, otro estado, fecha o nombre) y `otro`.", "",
+           "| Categoría | " + " | ".join(f"{m} · {MODES[mode]}" for m, mode in cells) + " | Total |",
+           "|---|" + "---:|" * (len(cells) + 1)]
+    for cat in FAILURE_CATEGORIES:
+        counts = [sum(r["modelo"] == m and r["modo"] == mode and r.get("fallo_categoria") == cat
+                      for r in failed) for m, mode in cells]
+        out.append(f"| `{cat}` | " + " | ".join(map(str, counts)) + f" | {sum(counts)} |")
+    out += ["", "### Un ejemplo real por categoría", "",
+            "| Categoría | Modelo · modo | Ítem | Pregunta | SQL generada | Detalle |", "|---|---|---|---|---|---|"]
+
+    def clean(text, n):
+        return str(text or "").replace("|", "/").replace("\n", " ").strip()[:n]
+
+    for cat in FAILURE_CATEGORIES:
+        ex = next((r for r in failed if r["fallo_categoria"] == cat), None)
+        if ex is None:
+            out.append(f"| `{cat}` | — | — | (sin casos) | — | — |")
+            continue
+        out.append(f"| `{cat}` | {ex['modelo']} · {MODES[ex['modo']]} | {ex['id']} "
+                   f"| {clean(questions.get(ex['id']), 120)} | `{clean(ex.get('sql'), 220)}` "
+                   f"| {clean(ex.get('fallo_detalle'), 140)} |")
+    return out
 
 
 def build_report(results: list[dict], models: list[str], modes: list[str], skipped: dict,
@@ -220,6 +363,8 @@ def build_report(results: list[dict], models: list[str], modes: list[str], skipp
             out.append(f"- Negocio, sistema completo = 10/10: **{n}/{len(biz_full)}** "
                        f"{'CUMPLE' if n == len(biz_full) == 10 else 'NO CUMPLE'}")
 
+    out += failure_table(results, models, modes)
+
     out += ["", "## Detalle", "",
             "| Modelo | Modo | Ítem | Resultado | Fuente | Intentos | Latencia SQL (s) | Total (s) | Motivo |",
             "|---|---|---|---|---|---:|---:|---:|---|"]
@@ -244,10 +389,27 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--oracle", action="store_true", help="usa la SQL de referencia como LLM (sin Ollama)")
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--fresh", action="store_true", help="no fusionar con resultados previos")
+    ap.add_argument("--reclasificar", action="store_true",
+                    help="añade fallo_categoria a eval/resultados.json sin llamar a Ollama "
+                         "(vuelve a ejecutar la SQL guardada de cada fallo)")
     args = ap.parse_args(argv)
 
     items = load_golden()
     skipped: dict[str, str] = {}
+
+    if args.reclasificar:
+        out = args.out or EVAL_DIR / "resultados.md"
+        json_path = out.with_suffix(".json")
+        stored = json.loads(json_path.read_text(encoding="utf-8"))
+        by_id, ref_cache = {it["id"]: it for it in items}, {}
+        stored = [reclassify_stored(r, by_id[r["id"]], ref_cache) for r in stored]
+        json_path.write_text(json.dumps(stored, ensure_ascii=False, indent=2), encoding="utf-8")
+        models = list(dict.fromkeys(r["modelo"] for r in stored))
+        modes = [m for m in MODES if any(r["modo"] == m for r in stored)]
+        out.write_text(build_report(stored, models, modes, {}, "Resultados de la evaluación Text-to-SQL"),
+                       encoding="utf-8")
+        print(f"Clasificados {sum(not r['ok'] for r in stored)} fallos. Reporte escrito en {out}")
+        return 0
 
     if args.oracle:
         models = ["oraculo"]
