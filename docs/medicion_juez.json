@@ -1,0 +1,101 @@
+{
+  "modelo": "qwen2.5:1.5b",
+  "resultados": [
+    {
+      "necesidad": "N3",
+      "pregunta": "¿Quiénes son nuestros mejores vendedores de bicicletas eléctricas?",
+      "ruta_normal": "verificada",
+      "ruta_normal_s": 0.154,
+      "juez_total_s": 82.5,
+      "intentos": 3,
+      "coincide": false,
+      "tiempo_sql_s": 34.3,
+      "tiempo_juez_s": 48.2,
+      "detalle": [
+        {
+          "numero": 1,
+          "exito": false,
+          "tiempo_segundos": 47.06,
+          "diagnostico": "El resultado no responde a la pregunta. Revísala paso a paso: qué vista o tabla usas, qué filtros aplicas en el WHERE, cómo agregas y si ordenas o limitas lo que pide. QUÉ CAMBIAR: La consulta actual no responde a la pregunta porque está agrupando por el vendedor (staff_name) en lugar de por la categoría de producto (brand_name). Debe agruparse por brand_name para obtener la categoría de producto de los vendedores."
+        },
+        {
+          "numero": 2,
+          "exito": false,
+          "tiempo_segundos": 22.5,
+          "diagnostico": "El resultado no responde a la pregunta. Revísala paso a paso: qué vista o tabla usas, qué filtros aplicas en el WHERE, cómo agregas y si ordenas o limitas lo que pide. QUÉ CAMBIAR: La consulta actual no devuelve los mejores vendedores de bicicletas eléctricas porque está agrupando por el nombre del vendedor y no por la categoría de producto. Para obtener los mejores vendedores de bicicletas eléctricas, debes agrupar por la categoría de producto (brand_name) en lugar de por el nombre del vendedor."
+        },
+        {
+          "numero": 3,
+          "exito": false,
+          "tiempo_segundos": 12.95,
+          "diagnostico": "El resultado no responde a la pregunta. Revísala paso a paso: qué vista o tabla usas, qué filtros aplicas en el WHERE, cómo agregas y si ordenas o limitas lo que pide."
+        }
+      ],
+      "tokens_prompt_juez": 2910
+    },
+    {
+      "necesidad": "N5",
+      "pregunta": "¿Cuánto nos están costando los envíos que llegan tarde y en qué tiendas pasa más?",
+      "ruta_normal": "verificada",
+      "ruta_normal_s": 0.209,
+      "juez_total_s": 75.7,
+      "intentos": 3,
+      "coincide": false,
+      "tiempo_sql_s": 30.0,
+      "tiempo_juez_s": 45.6,
+      "detalle": [
+        {
+          "numero": 1,
+          "exito": false,
+          "tiempo_segundos": 42.52,
+          "diagnostico": "Tu resultado tiene varias filas, pero la pregunta pide un desglose: probablemente falta un GROUP BY por la dimensión que se pide (tienda, mes, categoría, producto…). Revisa la función de agregación: si la pregunta es por orden (ticket, órdenes), agrega por orden (v_orders o COUNT(DISTINCT order_id)) y no por línea de pedido; comprueba también si corresponde SUM, AVG o COUNT. QUÉ CAMBIAR: La consulta actual no responde a la pregunta porque no agrupa por tienda, sino por orden, lo que hace que la tienda con más órdenes tenga más registros. Además, la consulta no agrupa por porcentaje de tardes, lo que hace que el resultado sea una lista de tiendas en orden descendente de ordenes, pero no proporciona la información solicitada sobre la cantidad de órdenes y el porcentaje de órdenes que llegaron tarde."
+        },
+        {
+          "numero": 2,
+          "exito": false,
+          "tiempo_segundos": 23.7,
+          "diagnostico": "Tu resultado tiene varias filas, pero la pregunta pide un desglose: probablemente falta un GROUP BY por la dimensión que se pide (tienda, mes, categoría, producto…). Revisa la función de agregación: si la pregunta es por orden (ticket, órdenes), agrega por orden (v_orders o COUNT(DISTINCT order_id)) y no por línea de pedido; comprueba también si corresponde SUM, AVG o COUNT. QUÉ CAMBIAR: La consulta actual agrupa por tienda y calcula el porcentaje de tardes, pero la pregunta pide saber cuánto se está pagando por los envíos que llegan tarde y en qué tiendas pasa más. Por lo tanto, la consulta debe cambiar para que muestre el monto […] de los envíos tardíos en lugar del porcentaje. Además, la consulta debe agruparse por tienda para poder comparar los costos de envío por tienda."
+        },
+        {
+          "numero": 3,
+          "exito": false,
+          "tiempo_segundos": 9.39,
+          "diagnostico": "no such column: net_amount"
+        }
+      ],
+      "tokens_prompt_juez": 2898
+    },
+    {
+      "necesidad": "N8",
+      "pregunta": "¿Cuánto gasta en promedio un cliente por pedido en cada una de nuestras tiendas?",
+      "ruta_normal": "verificada",
+      "ruta_normal_s": 0.184,
+      "juez_total_s": 44.7,
+      "intentos": 3,
+      "coincide": false,
+      "tiempo_sql_s": 16.2,
+      "tiempo_juez_s": 28.4,
+      "detalle": [
+        {
+          "numero": 1,
+          "exito": false,
+          "tiempo_segundos": 27.0,
+          "diagnostico": "Tu resultado tiene una sola fila, pero la pregunta pide un desglose: probablemente falta un GROUP BY por la dimensión que se pide (tienda, mes, categoría, producto…). Revisa la función de agregación: si la pregunta es por orden (ticket, órdenes), agrega por orden (v_orders o COUNT(DISTINCT order_id)) y no por línea de pedido; comprueba también si corresponde SUM, AVG o COUNT. QUÉ CAMBIAR: La consulta actual no agrupa por tienda, por lo que el resultado solo muestra el gasto promedio por cliente, no por tienda. Para responder a la pregunta, la consulta debe agrupar por tienda antes de calcular el promedio."
+        },
+        {
+          "numero": 2,
+          "exito": false,
+          "tiempo_segundos": 11.53,
+          "diagnostico": "Tu resultado tiene una sola fila, pero la pregunta pide un desglose: probablemente falta un GROUP BY por la dimensión que se pide (tienda, mes, categoría, producto…). Revisa la función de agregación: si la pregunta es por orden (ticket, órdenes), agrega por orden (v_orders o COUNT(DISTINCT order_id)) y no por línea de pedido; comprueba también si corresponde SUM, AVG o COUNT. QUÉ CAMBIAR: La consulta actual no agrupa por tienda, por lo que el resultado solo muestra el gasto promedio por tienda, pero no por cliente. Para que la consulta responda a la pregunta, se necesita agrupar por cliente en lugar de por tienda."
+        },
+        {
+          "numero": 3,
+          "exito": false,
+          "tiempo_segundos": 6.19,
+          "diagnostico": "no such column: customer_name"
+        }
+      ],
+      "tokens_prompt_juez": 2961
+    }
+  ]
+}

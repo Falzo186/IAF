@@ -112,3 +112,11 @@ h2, h3 { font-weight: 600; letter-spacing: -0.01em; }
   [data-testid="stMetric"] { min-height: 0; }
   .status-dot, .inline-note { padding-bottom: 0; white-space: normal; }
 }
+
+/* Accesos directos a las 10 necesidades (Asistente): botones compactos que se acomodan en filas */
+.st-key-needs { gap: 0.4rem !important; }
+.st-key-needs button {
+  min-height: 0; padding: 0.2rem 0.65rem; border-radius: 999px; font-size: 0.8rem;
+}
+.st-key-needs button p { font-size: 0.8rem; white-space: nowrap; }
+.attempts-title { font-size: 0.85rem; color: var(--text-muted); }

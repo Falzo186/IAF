@@ -72,3 +72,17 @@ def filter_kinds(ref_signature: set[str], got_signature: set[str]) -> set[str]:
 
 def has_digits(text: str) -> bool:
     return bool(re.search(r"\d", text))
+
+
+_NUMBER_RE = re.compile(r"\d[\d,.]*")
+
+
+def sanitize(text: str, ref: pd.DataFrame | None) -> str:
+    """Quita de un texto libre (la crítica del juez) toda cifra y todo texto de la referencia,
+    para que nunca le llegue al modelo el valor correcto, aunque el juez lo escriba por accidente."""
+    text = str(text or "")
+    if ref is not None:
+        values = {str(v) for v in ref.to_numpy().ravel() if isinstance(v, str) and len(v.strip()) > 2}
+        for v in sorted(values, key=len, reverse=True):
+            text = re.sub(re.escape(v), "[…]", text, flags=re.IGNORECASE)
+    return " ".join(_NUMBER_RE.sub("[…]", text).split())

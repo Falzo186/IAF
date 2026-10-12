@@ -9,6 +9,7 @@ import time
 
 import pandas as pd
 import streamlit as st
+import yaml
 
 import config
 import learned_patterns
@@ -23,6 +24,7 @@ ss.setdefault("messages", [])        # [{"role": "user", "content": str} | {"rol
 ss.setdefault("history", [])         # [{"question", "sql"}] para preguntas de seguimiento
 ss.setdefault("active_model", config.DEFAULT_MODEL)
 ss.setdefault("ai_writing", config.VERIFIED_SYNTHESIS)
+ss.setdefault("judge_mode", False)   # "Verificar con juez": apagado = chat de siempre
 
 SOURCE_BADGES = {
     "verificada": ("Verificada", "badge-verificada"),
@@ -37,6 +39,21 @@ SUGGESTIONS = [
     "¿Cuáles son las 5 marcas con más unidades vendidas?",
 ]
 STATUS_TTL_S = 10
+JUDGE_MAX_ATTEMPTS = 3
+SAME_MODEL = "Mismo modelo"
+# Accesos directos: etiqueta corta de cada necesidad. La pregunta que envían es la canónica de
+# reference_answers.yaml, que el enrutador resuelve siempre con la consulta verificada.
+NEED_SHORTCUTS = [
+    ("N1", "Rentabilidad"), ("N2", "Quiebre de stock"), ("N3", "Electric Bikes"),
+    ("N4", "Ciudades premium"), ("N5", "Envíos tarde"), ("N6", "Inventario inactivo"),
+    ("N7", "Multimarca"), ("N8", "Ticket promedio"), ("N9", "Rotación"), ("N10", "Cancelaciones"),
+]
+
+
+@st.cache_data(show_spinner=False)
+def canonical_questions() -> dict[str, str]:
+    data = yaml.safe_load((config.BASE_DIR / "reference_answers.yaml").read_text(encoding="utf-8"))
+    return {need: data[need]["pregunta"] for need, _ in NEED_SHORTCUTS}
 
 
 def backend():
@@ -90,11 +107,20 @@ if ss["active_model"] not in options:
     options.append(ss["active_model"])
 
 st.markdown("## Asistente")
-c_model, c_state, c_ai = st.columns([2, 1, 1], vertical_alignment="bottom")
+c_model, c_state, c_ai, c_judge = st.columns([2, 1, 1, 1], vertical_alignment="bottom")
 selected = c_model.selectbox("Modelo", options, index=options.index(ss["active_model"]), key="model_select")
 c_ai.toggle("Redacción con IA", key="ai_writing", disabled=not status["up"],
             help="Las consultas verificadas responden al instante con una frase calculada. Actívalo "
                  "para que el modelo redacte la respuesta (unos 11 s más por pregunta en CPU).")
+c_judge.toggle("Verificar con juez", key="judge_mode", disabled=not status["up"],
+               help="Más lento, pero muestra cómo el modelo corrige sus propios errores con ayuda "
+                    "de un juez.")
+judge_on = ss["judge_mode"] and status["up"]
+if judge_on:
+    # Por omisión el juez es el mismo modelo ya cargado (una sola carga en RAM, otro rol).
+    st.columns([2, 3])[0].selectbox(
+        "Modelo juez", [SAME_MODEL] + config.SUPPORTED_MODELS, key="judge_model",
+        help="Otro modelo como juez implica cargar dos modelos a la vez (más RAM).")
 
 def model_loaded(model: str) -> bool:
     """¿Está el modelo cargado en RAM (/api/ps)? Si no se puede saber, se asume que sí."""
@@ -193,6 +219,16 @@ elif not status["up"]:
             st.rerun()
 
 
+# --- Accesos directos a las 10 necesidades (1 clic = pregunta canónica) ----------------
+
+with st.container(horizontal=True, key="needs", gap="small"):
+    questions = canonical_questions()
+    for need, label in NEED_SHORTCUTS:
+        if st.button(f"{need} {label}", key=f"need_{need}", help=questions[need]):
+            ss["pending"] = questions[need]
+            st.rerun()
+
+
 # --- Render de mensajes --------------------------------------------------------------
 
 def md_text(text: str) -> str:
@@ -210,12 +246,18 @@ def render_result(r: se.QueryResult) -> None:
         chips.append(f"Periodo: {r.filters.get('date_from', '…')} – {r.filters.get('date_to', '…')}")
     for kind, value in r.unsupported_filters:
         chips.append(f"Adaptado por IA: {kind} {value}")
+    if r.reference_id:
+        chips.append(f"Comparada con la consulta verificada {r.reference_id}: "
+                     + ("coincide" if r.reference_match else "no coincide"))
+    elif r.judge_model and r.source == "llm":
+        chips.append("Revisada por el juez, sin respuesta de referencia")
     chips_html = "".join(f"<span class='chip'>{c}</span>" for c in chips)
     st.markdown(f"<span class='badge {css}'>{label}</span>{chips_html}", unsafe_allow_html=True)
 
     if r.sql:
         with st.expander("SQL"):
             st.code(r.sql, language="sql")
+    render_attempts(r.intentos)
     if r.df is not None and not r.df.empty:
         fig = None
         if r.source == "verificada" and r.business_query_id in charts.NEED_CHARTS:
@@ -228,7 +270,54 @@ def render_result(r: se.QueryResult) -> None:
                      column_config=charts.column_config(r.df))
     total = sum(r.timings.values())
     engine = "sin LLM" if r.source in ("verificada", "solo_lectura") and total < 1 else r.model
-    st.caption(f"{'<0.1' if total < 0.1 else f'{total:.1f}'} s · {engine}")
+    if r.judge_model and r.judge_model != r.model:
+        engine += f" · juez {r.judge_model}"
+    caption = f"{fmt_s(total)} s · {engine}"
+    if r.intentos:
+        n = len(r.intentos)
+        caption += (f" · {n} {'intento' if n == 1 else 'intentos'}: "
+                    f"{fmt_s(sum(i['tiempo_segundos'] for i in r.intentos))} s")
+    st.caption(caption)
+
+
+def fmt_s(seconds: float) -> str:
+    return "<0.1" if seconds < 0.1 else f"{seconds:.1f}"
+
+
+def attempt_outcome(i: dict) -> str:
+    """Resultado de un intento, sin interpretar: lo decidió el comparador, la ejecución o nadie."""
+    if i["exito"] is None:
+        return "○ se ejecutó (sin referencia para comprobarlo)"
+    if not i["exito"]:
+        return "✗ falló"
+    return "✓ acertó" if i["criterio"] in ("verificada", "comparador") else "✓ se ejecutó"
+
+
+def attempt_line(i: dict) -> str:
+    line = f"**Intento {i['numero']}** — {attempt_outcome(i)} ({fmt_s(i['tiempo_segundos'])} s)"
+    if i["diagnostico"]:
+        kind = "comentario del juez" if i["exito"] is None else "diagnóstico"
+        line += f" — {kind}: “{md_text(i['diagnostico'])}”"
+    return line
+
+
+def render_attempts(intentos: list[dict]) -> None:
+    """Expander "Intentos (N)": cada intento en orden, con el diagnóstico literal de los fallidos."""
+    if not intentos:
+        return
+    if len(intentos) == 1:
+        # Caso normal: se muestra directo, sin colapsar (un expander no conserva expanded=True al
+        # volver a dibujar el historial).
+        first = intentos[0]
+        verb = attempt_outcome(first).split(" ", 1)[1].split(" (")[0]
+        label = f"Intentos (1) — {verb} a la primera" if first["exito"] is not False else "Intentos (1) — falló"
+        with st.container(border=True, key=f"intentos_{id(intentos)}"):
+            st.markdown(f"<div class='attempts-title'>{label}</div>", unsafe_allow_html=True)
+            st.markdown(attempt_line(first))
+        return
+    with st.expander(f"Intentos ({len(intentos)})"):
+        for i in intentos:
+            st.markdown(attempt_line(i))
 
 
 # --- Entrada (se lee antes de dibujar: si llega una pregunta, no se muestra el saludo) ---
@@ -267,9 +356,21 @@ if question:
         st.markdown(question)
     with st.chat_message("assistant", avatar=AVATARS["assistant"]):
         llm = llm_for(status)
-        with st.status("Generando consulta…", expanded=False) as box:
+        label = (f"Generando y revisando la consulta (hasta {JUDGE_MAX_ATTEMPTS} intentos)…"
+                 if judge_on else "Generando consulta…")
+        with st.status(label, expanded=False) as box:
             t0 = time.perf_counter()
-            result = se.answer_question(question, model, ss["history"], llm=llm, synthesize_answer=False)
+            if judge_on:
+                # Modo juez: el modelo contesta solo con el esquema, aun en las 10 necesidades; si la
+                # pregunta es una de ellas, su consulta verificada es la referencia del comparador.
+                route, bq, params, _ = se.plan_route(question)
+                ref = se.reference_for(bq, params) if route == "verificada" else None
+                judge_model = ss.get("judge_model", SAME_MODEL)
+                result = se.answer_with_judge(
+                    question, model, None if judge_model == SAME_MODEL else judge_model, ref,
+                    JUDGE_MAX_ATTEMPTS, history=ss["history"], llm=llm)
+            else:
+                result = se.answer_question(question, model, ss["history"], llm=llm, synthesize_answer=False)
             learned_patterns.log_pattern(result)  # bitácora para revisión humana; no afecta la respuesta
             if result.error is None and result.df is not None:
                 t1 = time.perf_counter()

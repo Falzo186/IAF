@@ -72,6 +72,27 @@ class QueryResult:
     # solo existe si quien llama pasó attempt_check (el harness, que tiene la referencia).
     attempt_log: list = field(default_factory=list)
     hit_attempt: int | None = None   # intento en que attempt_check dio por buena la respuesta
+    # Rastro visible en el Asistente: un dict por intento (ver _intento).
+    intentos: list = field(default_factory=list)
+    # Solo answer_with_judge: necesidad usada como referencia, si el comparador determinista dio
+    # el resultado por correcto (None = no había referencia) y el modelo que hizo de juez.
+    reference_id: str | None = None
+    reference_match: bool | None = None
+    judge_model: str | None = None
+
+
+def _intento(numero: int, sql: str | None, exito: bool | None, segundos: float,
+             diagnostico: str | None, criterio: str) -> dict:
+    """Entrada de QueryResult.intentos.
+
+    exito: True/False, o None si se ejecutó pero no hay referencia para saber si acertó.
+    criterio: quién decidió exito: "verificada" (consulta verificada), "comparador" (comparador
+    determinista contra la referencia), "ejecucion" (solo se sabe si corrió sin error) o
+    "sin_referencia" (modo juez con pregunta libre).
+    diagnostico: por qué falló ese intento (error real o feedback sin valores de la referencia).
+    """
+    return {"numero": numero, "sql": sql, "exito": exito, "tiempo_segundos": round(segundos, 2),
+            "diagnostico": diagnostico, "criterio": criterio}
 
 
 # ---------------------------------------------------------------------------
@@ -803,6 +824,7 @@ def answer_question(question: str, model: str, history: list[dict] | None = None
             t0 = time.perf_counter()
             result.df = run_business_query(bq, **params, limit=MAX_ROWS, db_path=db_path)
             result.timings["exec"] = time.perf_counter() - t0
+            result.intentos = [_intento(1, result.sql, True, result.timings["exec"], None, "verificada")]
         else:
             anchor = None
             if route == "llm_anclada":
@@ -861,6 +883,7 @@ def _generate_and_run(result: QueryResult, question: str, history: list[dict] | 
         messages[0] = {"role": "system", "content": messages[0]["content"]
                        + ANCHOR_TEMPLATE.format(titulo=bq.titulo, sql=ref_sql)}
     last_error = None
+    criterio = "ejecucion" if attempt_check is None else "comparador"
     for attempt in range(1, max(1, max_attempts) + 1):
         result.attempts = attempt
         t0 = time.perf_counter()
@@ -868,6 +891,8 @@ def _generate_and_run(result: QueryResult, question: str, history: list[dict] | 
             raw = llm(result.model, messages, **SQL_OPTIONS)
         except Exception as exc:
             result.timings["sql_gen"] += time.perf_counter() - t0
+            result.intentos.append(_intento(attempt, None, False, time.perf_counter() - t0,
+                                            str(exc), criterio))
             result.error = str(exc)
             result.answer = ("No pude comunicarme con el modelo de lenguaje local. Verifica que Ollama "
                              "esté en ejecución y que el modelo esté descargado.")
@@ -888,12 +913,17 @@ def _generate_and_run(result: QueryResult, question: str, history: list[dict] | 
             result.df = None
 
         if attempt_check is None:
-            if last_error is None:
+            ok, feedback = last_error is None, last_error
+            result.intentos.append(_intento(attempt, result.sql, ok, time.perf_counter() - t0,
+                                            feedback, criterio))
+            if ok:
                 return                                    # producción: basta con que se ejecute
-            feedback, template = last_error, RETRY_ERROR_TEMPLATE
+            template = RETRY_ERROR_TEMPLATE
         else:
             ok, feedback = attempt_check(result.sql, result.df, last_error)
             log["correcto"], log["feedback"] = ok, (None if ok else feedback)
+            result.intentos.append(_intento(attempt, result.sql, ok, time.perf_counter() - t0,
+                                            None if ok else feedback, criterio))
             if ok:
                 result.hit_attempt = attempt               # corte en el primer acierto
                 return
@@ -909,3 +939,130 @@ def _generate_and_run(result: QueryResult, question: str, history: list[dict] | 
         result.df = None
     # Con attempt_check y la última SQL ejecutada pero incorrecta, se conserva su resultado: el
     # harness lo compara con la referencia y lo marca como incorrecto.
+
+
+# ---------------------------------------------------------------------------
+# Modo "Verificar con juez" (Asistente): el modelo itera con la crítica de un juez
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Referencia:
+    """Respuesta verificada de una de las 10 necesidades, usada como referencia del comparador."""
+    need_id: str
+    sql: str
+    df: pd.DataFrame
+    check: dict
+
+
+def reference_for(bq: BusinessQuery, params: dict | None = None,
+                  db_path: Path = config.DB_PATH) -> Referencia:
+    """Referencia para una necesidad: su SQL verificada (con los filtros soportados) y el criterio
+    de comparación del golden set (eval/golden.json)."""
+    import eval_text2sql as ev  # import tardío: el harness importa este módulo
+    params = params or {}
+    sql = render_sql(bq, **params)
+    df = execute_sql(validate_sql(sql, db_path), db_path)
+    check = next((it["check"] for it in ev.load_golden() if it.get("business_query") == bq.id),
+                 {"mode": "exact"})
+    return Referencia(bq.id, sql, df, check)
+
+
+JUDGE_RETRY_TEMPLATE = (
+    "Esa consulta se ejecutó. Un revisor la comentó así: {feedback}\n"
+    "Si la crítica tiene razón, corrígela usando solo el esquema dado. Devuelve solo la consulta "
+    "SQL dentro de ```sql ... ```."
+)
+
+
+def answer_with_judge(pregunta: str, modelo: str, modelo_juez: str | None = None,
+                      referencia: Referencia | None = None, max_intentos: int = 3, *,
+                      history: list[dict] | None = None, llm: LLM | None = None,
+                      judge_llm: LLM | None = None, db_path: Path = config.DB_PATH) -> QueryResult:
+    """Responde con hasta max_intentos, criticando cada intento con un juez-LLM.
+
+    El modelo genera SQL solo con el esquema (sin enrutador ni consultas de referencia). El juez es
+    por defecto el MISMO modelo (una sola carga en RAM, otro system prompt).
+    - Con referencia (pregunta reconocida como una de las 10 necesidades): el comparador
+      determinista decide si acertó y se corta en el primer acierto. Si falló, el feedback es el de
+      feedback.py por categoría más la crítica del juez, saneada para que no lleve cifras ni textos
+      de la referencia.
+    - Sin referencia (pregunta libre): nadie decide si acertó; el juez solo comenta la forma de la
+      SQL. Al final se usa el último intento que se ejecutó sin error (o el primero si ninguno).
+    Nunca lanza excepciones; no sintetiza la respuesta (lo hace quien llama).
+    """
+    import eval_text2sql as ev
+    import feedback as fb
+    import judge
+
+    result = QueryResult(question=pregunta, model=modelo)
+    result.judge_model = modelo_juez or modelo
+    result.timings["judge"] = 0.0
+    if is_write_request(pregunta):
+        result.source, result.answer = "solo_lectura", READ_ONLY_ANSWER
+        return result
+    llm = llm or _default_llm()
+    judge_llm = judge_llm or llm
+    db_path = Path(db_path)
+    check = None
+    if referencia is not None:
+        result.reference_id, result.reference_match = referencia.need_id, False
+        check = ev.make_attempt_check({"sql": referencia.sql, "check": referencia.check}, referencia.df)
+    criterio = "comparador" if check else "sin_referencia"
+    runs = []   # (sql, df, error) de cada intento
+    try:
+        messages = build_sql_messages(pregunta, history if is_follow_up(pregunta) else None, db_path)
+        for n in range(1, max(1, max_intentos) + 1):
+            result.attempts = n
+            t0 = time.perf_counter()
+            raw = llm(modelo, messages, **SQL_OPTIONS)
+            result.timings["sql_gen"] += time.perf_counter() - t0
+            sql = extract_sql(raw) or None
+            df = error = None
+            try:
+                sql, df, exec_t = _run_sql(sql or "", db_path)
+                result.timings["exec"] += exec_t
+            except (SQLValidationError, QueryTimeout, sqlite3.Error, pd.errors.DatabaseError) as exc:
+                error = str(exc)
+            runs.append((sql, df, error))
+            last = n == max_intentos
+
+            if check is not None:
+                ok, diagnostico = check(sql, df, error)
+                if ok:
+                    result.intentos.append(_intento(n, sql, True, time.perf_counter() - t0, None, criterio))
+                    result.hit_attempt, result.reference_match = n, True
+                    break
+                exito = False
+            else:
+                exito = None if error is None else False
+                diagnostico = error
+
+            if not last:   # en el último intento no hace falta crítica: no habrá otro
+                tj = time.perf_counter()
+                critique = judge.critique(pregunta, sql, df, error, result.judge_model, llm=judge_llm,
+                                          exclude_need=referencia.need_id if referencia else None,
+                                          con_referencia=referencia is not None)
+                result.timings["judge"] += time.perf_counter() - tj
+                if referencia is not None:
+                    critique = fb.sanitize(critique, referencia.df)
+                if critique:
+                    diagnostico = f"{diagnostico} {critique}".strip() if diagnostico else critique
+            result.intentos.append(_intento(n, sql, exito, time.perf_counter() - t0, diagnostico, criterio))
+            if not last:
+                template = (RETRY_ERROR_TEMPLATE if error
+                            else RETRY_RESULT_TEMPLATE if check is not None else JUDGE_RETRY_TEMPLATE)
+                messages = messages + [
+                    {"role": "assistant", "content": f"```sql\n{sql}\n```" if sql else (raw or "")},
+                    {"role": "user", "content": template.format(feedback=diagnostico or fb.GENERIC)},
+                ]
+    except Exception as exc:  # el LLM no respondió: se usa lo que haya
+        runs.append((None, None, str(exc)))
+        result.intentos.append(_intento(len(runs), None, False, 0.0, str(exc), criterio))
+
+    clean = [r for r in runs if r[2] is None]
+    sql, df, error = (runs[-1] if result.reference_match else
+                      clean[-1] if clean else runs[0] if runs else (None, None, "sin intentos"))
+    result.sql, result.df, result.error = sql, df, error
+    if error is not None:
+        result.answer, result.df = FRIENDLY_ERROR, None
+    return result

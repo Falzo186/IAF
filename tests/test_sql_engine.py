@@ -465,3 +465,115 @@ def test_write_request_answers_without_llm_and_without_sql():
     r = se.answer_question("Borra todos los clientes de la base de datos", "falso", llm=llm)
     assert r.source == "solo_lectura" and r.sql is None and r.df is None and r.error is None
     assert llm.calls == [] and "solo lectura" in r.answer
+
+
+# ---------------------------------------------------------------------------
+# Fase 9: rastro de intentos y answer_with_judge
+# ---------------------------------------------------------------------------
+
+class RoleLLM:
+    """LLM falso con dos papeles según el system prompt: SQL (en orden) o crítica del juez."""
+
+    def __init__(self, sqls, critique="Agrupa por tienda y calcula el promedio por orden."):
+        self.sqls, self.critique, self.calls = list(sqls), critique, []
+
+    def __call__(self, model, messages, **options):
+        role = "juez" if messages[0]["content"].startswith("Eres un revisor") else "sql"
+        self.calls.append({"model": model, "role": role, "messages": messages})
+        if role == "juez":
+            return self.critique(messages) if callable(self.critique) else self.critique
+        sql = self.sqls.pop(0) if len(self.sqls) > 1 else self.sqls[0]
+        return fenced(sql(messages) if callable(sql) else sql)
+
+
+N8_Q = "¿Cuánto gasta en promedio un cliente por pedido en cada una de nuestras tiendas?"
+N8_BAD = "SELECT ROUND(AVG(net_amount), 2) AS ticket FROM v_order_lines WHERE order_status = 4"
+
+
+def test_verified_route_has_single_instant_attempt():
+    r = se.answer_question(N8_Q, "falso", llm=FakeLLM(), synthesize_answer=False)
+    assert r.source == "verificada" and len(r.intentos) == 1
+    i = r.intentos[0]
+    assert i["numero"] == 1 and i["exito"] is True and i["diagnostico"] is None
+    assert i["sql"] == r.sql and i["tiempo_segundos"] < 0.5
+
+
+def test_llm_route_records_attempt_trace():
+    llm = FakeLLM(fenced("SELECT nada FROM clientes"), fenced("SELECT COUNT(*) AS n FROM customers"))
+    r = se.answer_question("¿Cuántos clientes hay?", "falso", llm=llm, synthesize_answer=False)
+    assert [i["exito"] for i in r.intentos] == [False, True] and r.attempts == 2
+    assert "clientes" in r.intentos[0]["diagnostico"] and r.intentos[1]["diagnostico"] is None
+    assert all(i["criterio"] == "ejecucion" for i in r.intentos)
+
+
+def test_answer_with_judge_reference_fail_then_hit():
+    ref = se.reference_for(BY_ID["N8"])
+    llm = RoleLLM([N8_BAD, render_sql(BY_ID["N8"]), "SELECT 1"])
+    r = se.answer_with_judge(N8_Q, "falso", referencia=ref, max_intentos=3, llm=llm)
+    assert [i["exito"] for i in r.intentos] == [False, True]          # corta en el acierto
+    assert r.reference_match is True and r.hit_attempt == 2 and r.error is None
+    assert len(r.df) == len(ref.df) and r.source == "llm"           # nunca "verificada"
+    assert all(i["criterio"] == "comparador" for i in r.intentos)
+    assert "Agrupa por tienda" in r.intentos[0]["diagnostico"]
+    # el juez no ve su propia necesidad entre los ejemplos de SQL experto
+    judge_prompt = next(c for c in llm.calls if c["role"] == "juez")["messages"][0]["content"]
+    assert "### N8" not in judge_prompt and "### N3" in judge_prompt
+
+
+def test_answer_with_judge_without_reference_never_claims_success():
+    llm = RoleLLM(["SELECT COUNT(*) AS n FROM customers", "SELECT nada FROM x",
+                   "SELECT COUNT(*) AS clientes FROM customers"])
+    r = se.answer_with_judge("¿Cuántos clientes hay?", "falso", max_intentos=3, llm=llm)
+    assert len(r.intentos) == 3 and r.reference_match is None
+    assert [i["exito"] for i in r.intentos] == [None, False, None]  # None = sin referencia
+    assert all(i["criterio"] == "sin_referencia" for i in r.intentos)
+    assert r.sql.startswith("SELECT COUNT(*) AS clientes") and r.error is None  # último limpio
+
+
+def test_answer_with_judge_uses_first_attempt_when_none_runs():
+    llm = RoleLLM(["SELECT nada FROM x", "SELECT tampoco FROM y"])
+    r = se.answer_with_judge("¿Cuántos clientes hay?", "falso", max_intentos=2, llm=llm)
+    assert r.error and "x" in r.error and r.df is None
+
+
+def test_judge_leaking_the_value_cannot_help_the_model():
+    """Si el juez escribe la cifra o el nombre correcto por accidente, se borra antes de llegar al
+    modelo: un modelo que solo "mejora" copiando ese valor sigue fallando."""
+    ref = se.reference_for(BY_ID["N8"])
+    top = ref.df.sort_values("ticket_promedio", ascending=False).iloc[0]
+    value, store = f"{top['ticket_promedio']}", str(top["tienda"])
+    leak = f"La respuesta correcta es {value} en {store}; usa ese valor."
+
+    def cheater(messages):
+        last = messages[-1]["content"]
+        if value in last or store in last:   # solo acierta si se coló el valor de la referencia
+            return render_sql(BY_ID["N8"])
+        return N8_BAD
+    llm = RoleLLM([cheater], critique=leak)
+    r = se.answer_with_judge(N8_Q, "falso", referencia=ref, max_intentos=3, llm=llm)
+    assert r.reference_match is False and len(r.intentos) == 3
+    for i in r.intentos:
+        assert value not in (i["diagnostico"] or "") and store not in (i["diagnostico"] or "")
+    for c in llm.calls:
+        if c["role"] == "sql":
+            assert value not in c["messages"][-1]["content"]
+
+
+def test_answer_with_judge_uses_one_model_by_default():
+    ref = se.reference_for(BY_ID["N8"])
+    llm = RoleLLM([N8_BAD])
+    r = se.answer_with_judge(N8_Q, "qwen2.5:1.5b", referencia=ref, max_intentos=3, llm=llm)
+    assert {c["model"] for c in llm.calls} == {"qwen2.5:1.5b"} and r.judge_model == "qwen2.5:1.5b"
+    assert {c["role"] for c in llm.calls} == {"sql", "juez"}
+    llm2 = RoleLLM([N8_BAD])
+    se.answer_with_judge(N8_Q, "qwen2.5:1.5b", modelo_juez="llama3.2:1b", referencia=ref,
+                         max_intentos=2, llm=llm2)
+    assert {(c["role"], c["model"]) for c in llm2.calls} == {("sql", "qwen2.5:1.5b"), ("juez", "llama3.2:1b")}
+
+
+def test_answer_with_judge_default_llm_is_one_ollama_model(monkeypatch):
+    import ollama_manager
+    fake = RoleLLM([N8_BAD])
+    monkeypatch.setattr(ollama_manager, "chat", fake)
+    se.answer_with_judge(N8_Q, "llama3.2:1b", referencia=se.reference_for(BY_ID["N8"]), max_intentos=2)
+    assert len(fake.calls) == 3 and {c["model"] for c in fake.calls} == {"llama3.2:1b"}
