@@ -46,6 +46,8 @@ FRIENDLY_ERROR = (
 NO_ROWS_ANSWER = "No se encontraron registros para esa consulta."
 
 LLM = Callable[..., str]
+# attempt_check(sql, df, error) -> (correcto, feedback); solo lo usa el harness de evaluación.
+AttemptCheck = Callable[[str | None, "pd.DataFrame | None", str | None], tuple[bool, str]]
 
 
 class SQLValidationError(ValueError):
@@ -66,6 +68,10 @@ class QueryResult:
     business_query_id: str | None = None
     filters: dict = field(default_factory=dict)            # filtros aplicados (verificada)
     unsupported_filters: list = field(default_factory=list)  # motivo del anclaje
+    # Un dict por intento de SQL: {intento, sql, ejecuto, error, correcto, feedback}. "correcto"
+    # solo existe si quien llama pasó attempt_check (el harness, que tiene la referencia).
+    attempt_log: list = field(default_factory=list)
+    hit_attempt: int | None = None   # intento en que attempt_check dio por buena la respuesta
 
 
 # ---------------------------------------------------------------------------
@@ -763,11 +769,19 @@ def _run_sql(sql: str, db_path: Path) -> tuple[str, pd.DataFrame, float]:
 def answer_question(question: str, model: str, history: list[dict] | None = None,
                     llm: LLM | None = None, *, db_path: Path = config.DB_PATH,
                     use_router: bool = True, synthesize_answer: bool = True,
-                    verified_synthesis: bool | None = None) -> QueryResult:
+                    verified_synthesis: bool | None = None, max_attempts: int | None = None,
+                    attempt_check: AttemptCheck | None = None) -> QueryResult:
     """Responde una pregunta en español. Nunca lanza excepciones: los errores van en QueryResult.error.
 
     verified_synthesis: si la ruta es "verificada", ¿redacta la respuesta el LLM? Con False
     (por defecto, config.VERIFIED_SYNTHESIS) se usa la frase determinística de analytics.insight.
+
+    max_attempts: intentos de generar SQL (por defecto config.MAX_ATTEMPTS = 2, como en el chat).
+    attempt_check: SOLO para el harness de evaluación, que conoce la referencia. Se llama tras cada
+    intento como attempt_check(sql, df, error) -> (correcto, feedback). Si es correcto se corta ahí
+    (corte en el primer acierto); si no, el feedback, que nunca debe contener valores de la
+    referencia, se envía al siguiente intento. Sin attempt_check (producción) solo se reintenta
+    cuando la SQL falla, con el mensaje de error, como siempre.
     """
     if verified_synthesis is None:
         verified_synthesis = config.VERIFIED_SYNTHESIS
@@ -797,7 +811,8 @@ def answer_question(question: str, model: str, history: list[dict] | None = None
                 anchor = (bq, render_sql(bq, **params))
             # El historial solo acompaña a las preguntas de seguimiento (ver is_follow_up).
             _generate_and_run(result, question, history if is_follow_up(question) else None,
-                              llm, db_path, anchor)
+                              llm, db_path, anchor, max_attempts or config.MAX_ATTEMPTS,
+                              attempt_check)
             if result.error:
                 return result
 
@@ -825,15 +840,28 @@ ANCHOR_TEMPLATE = (
 
 
 
+RETRY_ERROR_TEMPLATE = (
+    "Esa consulta falló con este error: {feedback}\n"
+    "Corrígela usando solo el esquema dado. Devuelve solo la consulta SQL corregida "
+    "dentro de ```sql ... ```."
+)
+RETRY_RESULT_TEMPLATE = (
+    "Esa consulta se ejecutó, pero el resultado no responde bien a la pregunta. {feedback}\n"
+    "Corrígela usando solo el esquema dado. Devuelve solo la consulta SQL corregida "
+    "dentro de ```sql ... ```."
+)
+
+
 def _generate_and_run(result: QueryResult, question: str, history: list[dict] | None,
-                      llm: LLM, db_path: Path, anchor: tuple | None = None) -> None:
+                      llm: LLM, db_path: Path, anchor: tuple | None = None,
+                      max_attempts: int = 2, attempt_check: AttemptCheck | None = None) -> None:
     messages = build_sql_messages(question, history, db_path)
     if anchor is not None:
         bq, ref_sql = anchor
         messages[0] = {"role": "system", "content": messages[0]["content"]
                        + ANCHOR_TEMPLATE.format(titulo=bq.titulo, sql=ref_sql)}
     last_error = None
-    for attempt in (1, 2):
+    for attempt in range(1, max(1, max_attempts) + 1):
         result.attempts = attempt
         t0 = time.perf_counter()
         try:
@@ -848,20 +876,36 @@ def _generate_and_run(result: QueryResult, question: str, history: list[dict] | 
 
         sql = extract_sql(raw)
         result.sql = sql or None
+        log = {"intento": attempt, "sql": sql or None, "ejecuto": False, "error": None}
+        result.attempt_log.append(log)
         try:
             result.sql, result.df, exec_t = _run_sql(sql, db_path)
             result.timings["exec"] += exec_t
-            result.error = None
-            return
+            result.error = last_error = None
+            log["ejecuto"] = True
         except (SQLValidationError, QueryTimeout, sqlite3.Error, pd.errors.DatabaseError) as exc:
-            last_error = str(exc)
+            last_error = log["error"] = str(exc)
+            result.df = None
+
+        if attempt_check is None:
+            if last_error is None:
+                return                                    # producción: basta con que se ejecute
+            feedback, template = last_error, RETRY_ERROR_TEMPLATE
+        else:
+            ok, feedback = attempt_check(result.sql, result.df, last_error)
+            log["correcto"], log["feedback"] = ok, (None if ok else feedback)
+            if ok:
+                result.hit_attempt = attempt               # corte en el primer acierto
+                return
+            template = RETRY_ERROR_TEMPLATE if last_error else RETRY_RESULT_TEMPLATE
+        if attempt < max_attempts:
             messages = messages + [
                 {"role": "assistant", "content": f"```sql\n{sql}\n```" if sql else (raw or "")},
-                {"role": "user", "content": (
-                    f"Esa consulta falló con este error: {last_error}\n"
-                    "Corrígela usando solo el esquema dado. Devuelve solo la consulta SQL corregida "
-                    "dentro de ```sql ... ```.")},
+                {"role": "user", "content": template.format(feedback=feedback)},
             ]
-    result.error = last_error
-    result.answer = FRIENDLY_ERROR
-    result.df = None
+    if last_error is not None:
+        result.error = last_error
+        result.answer = FRIENDLY_ERROR
+        result.df = None
+    # Con attempt_check y la última SQL ejecutada pero incorrecta, se conserva su resultado: el
+    # harness lo compara con la referencia y lo marca como incorrecto.

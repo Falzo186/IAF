@@ -13,7 +13,8 @@
     "latencia_total_s": null,
     "sql": "SELECT COUNT(DISTINCT customer_id) AS clientes_n_y\nFROM customers\nWHERE state = 'NY'\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B2",
@@ -29,7 +30,8 @@
     "latencia_total_s": null,
     "sql": "SELECT SUM(net_total) AS ingreso_neto_total\nFROM v_orders\nWHERE order_status = 4 AND strftime('%Y', order_date) = '2017'\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B3",
@@ -45,7 +47,8 @@
     "latencia_total_s": null,
     "sql": "SELECT product_name AS producto, SUM(quantity) AS unidades\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY product_name\nORDER BY unidades DESC\nLIMIT 5",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B4",
@@ -61,7 +64,8 @@
     "latencia_total_s": null,
     "sql": "SELECT order_status, COUNT(*) AS ordenes\nFROM v_orders\nGROUP BY order_status\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B5",
@@ -77,7 +81,8 @@
     "latencia_total_s": null,
     "sql": "SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND strftime('%Y', order_date) = '2017'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 1",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B6",
@@ -93,7 +98,8 @@
     "latencia_total_s": null,
     "sql": "SELECT category_name AS categoria, ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY category_name\nORDER BY ingreso_neto DESC\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B7",
@@ -110,7 +116,8 @@
     "sql": "SELECT store_name AS tienda, product_name AS producto, SUM(quantity) AS unidades\nFROM stocks\nJOIN products ON stocks.product_id = products.product_id\nGROUP BY tienda, producto\nORDER BY tienda, producto",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: store_name"
+    "fallo_detalle": "no such column: store_name",
+    "explicacion_juez": "El resultado no coincide porque el SQL original no incluye la columna \"store_name\" en la consulta de referencia, lo que hace que la consulta de referencia no muestre la información de tienda. Además, el resultado de la consulta original no especifica la cantidad de unidades, solo la suma total de las unidades en cada tienda."
   },
   {
     "id": "B8",
@@ -126,7 +133,8 @@
     "latencia_total_s": null,
     "sql": "SELECT COUNT(*)\nFROM v_orders\nWHERE order_status = 4 AND strftime('%Y', order_date) = '2016'\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B9",
@@ -142,7 +150,8 @@
     "latencia_total_s": null,
     "sql": "SELECT strftime('%Y-%m', order_date) AS mes, SUM(net_total) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND strftime('%Y', order_date) = '2017'\nGROUP BY mes\nORDER BY mes\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B10",
@@ -158,7 +167,8 @@
     "latencia_total_s": null,
     "sql": "SELECT AVG(list_price) AS precio_promedio\nFROM products\nJOIN brands ON products.brand_id = brands.brand_id\nWHERE brand_name = 'Trek'\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N1",
@@ -174,7 +184,8 @@
     "latencia_total_s": null,
     "sql": "SELECT product_name AS producto, SUM(discount_amount) AS dinero_sobre_la_mesa\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY product_name\nORDER BY dinero_sobre_la_mesa DESC\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N2",
@@ -191,7 +202,8 @@
     "sql": "SELECT p.product_name AS producto, st.quantity AS stock, st.quantity - v_order_lines.quantity AS stock_disponible\nFROM stocks st\nJOIN products p ON p.product_id = st.product_id\nJOIN v_order_lines vol ON vol.product_id = st.product_id\nWHERE st.quantity < vol.quantity\nORDER BY stock_disponible DESC\nLIMIT 10",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: v_order_lines.quantity"
+    "fallo_detalle": "no such column: v_order_lines.quantity",
+    "explicacion_juez": "El resultado obtenido no coincide con el de referencia debido a que la consulta SQL genera una lista de productos que se venden mucho pero están a punto de agotarse en alguna tienda. Sin embargo, el resultado de referencia muestra productos específicos que se venden en ciertas tiendas y tienen stock disponible. La consulta SQL no selecciona productos específicos, sino que agrupa por tienda y muestra la cantidad de stock disponible para cada producto."
   },
   {
     "id": "N3",
@@ -208,7 +220,8 @@
     "sql": "SELECT staff_name AS vendedor, COUNT(*) AS ventas, SUM(net_amount) AS ingreso_neto\nFROM v_order_lines\nJOIN staffs ON staffs.staff_id = v_order_lines.staff_id\nWHERE order_status = 4 AND brand_name = 'Electric Bikes'\nGROUP BY staff_name\nORDER BY ingreso_neto DESC\nLIMIT 1",
     "respuesta": null,
     "fallo_categoria": "otro",
-    "fallo_detalle": "filas: esperadas 6, obtenidas 0"
+    "fallo_detalle": "filas: esperadas 6, obtenidas 0",
+    "explicacion_juez": "El resultado obtenido no coincide con el de referencia debido a la falta de agrupamiento de las ventas por vendedor en la consulta SQL. La consulta solo agrupa las ventas por tienda, lo que resulta en un solo vendedor en la lista de los mejores vendedores de bicicletas eléctricas. Sin embargo, el resultado de referencia muestra múltiples vendedores con ingresos netos significativos, lo que indica que la consulta SQL debe agrupar las ventas por vendedor para obtener el resultado correcto."
   },
   {
     "id": "N4",
@@ -225,7 +238,8 @@
     "sql": "SELECT customer_city, ROUND(SUM(discount_amount), 2) AS descuento_total\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY customer_city\nORDER BY descuento_total ASC\nLIMIT 5",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "agregación (('Sum',), 1) contra referencia (('Avg', 'Min', 'Sum', 'Sum', 'Sum'), 2)"
+    "fallo_detalle": "agregación (('Sum',), 1) contra referencia (('Avg', 'Min', 'Sum', 'Sum', 'Sum'), 2)",
+    "explicacion_juez": "El resultado obtenido no coincide con el de referencia debido a la diferencia en la columna \"ingreso_neto_desc_minimo\" y la agrupación de datos. En el resultado generado, se mide el descuento total general, mientras que en el de referencia se calcula el ingreso neto y el porcentaje de descuento mínimo por ciudad. Además, el resultado de referencia incluye más filas, probablemente debido a la agregación de datos de múltiples ciudades, mientras que el resultado generado solo muestra las 5 ciudades con mayores descuentos."
   },
   {
     "id": "N5",
@@ -242,7 +256,8 @@
     "sql": "SELECT \n    store_name AS tienda,\n    COUNT(*) AS ordenes,\n    SUM(is_late) AS tardes,\n    SUM(is_late) * 1.0 / COUNT(*) AS porcentaje\nFROM \n    v_orders\nWHERE \n    is_shipped = 1\nGROUP BY \n    store_name\nORDER BY \n    porcentaje DESC\nLIMIT \n    10",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "agregación (('Count', 'Count', 'Sum', 'Sum'), 1) contra referencia (('Avg', 'Avg', 'Count', 'Count', 'Sum', 'Sum'), 0)"
+    "fallo_detalle": "agregación (('Count', 'Count', 'Sum', 'Sum'), 1) contra referencia (('Avg', 'Avg', 'Count', 'Count', 'Sum', 'Sum'), 0)",
+    "explicacion_juez": "El resultado obtenido no coincide con el de referencia debido a la falta de información sobre los costos de envío en la consulta generada. La consulta solo considera la columna is_late para determinar si un pedido llegó tarde, pero no incluye la columna cost_per_order para calcular el monto total de los envíos que llegaron tarde. Además, la consulta no agrupa por tiendas, lo que podría explicar la diferencia en la cantidad de ordenes y la cantidad de tardes. La consulta de referencia, por otro lado, calcula el monto neto"
   },
   {
     "id": "N6",
@@ -259,7 +274,8 @@
     "sql": "SELECT \n    p.product_name AS producto,\n    s.quantity AS stock,\n    ROUND(SUM(p.list_price * s.quantity), 2) AS capital\nFROM \n    stocks s\nJOIN \n    products p ON p.product_id = s.product_id\nJOIN \n    stores st ON st.store_id = s.store_id\nWHERE \n    s.quantity > 0\n    AND strftime('%Y', s.order_date) = '2016'\nGROUP BY \n    p.product_name, s.quantity\nORDER BY \n    capital DESC\nLIMIT \n    10",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: s.order_date"
+    "fallo_detalle": "no such column: s.order_date",
+    "explicacion_juez": "La consulta SQL generada no coincide con el resultado de referencia debido a la falta de agrupación y filtrado adecuados. En particular, la consulta no agrupa los productos por estado de inventario ni filtra por el período específico de 2016, lo que hace que la consulta no sea capaz de identificar los productos que llevan meses sin moverse y cuánto capital se encuentra ahí parado. Además, la consulta no se ajusta a la estructura del resultado de referencia, que incluye columnas adicionales como \"estado_inventario\""
   },
   {
     "id": "N7",
@@ -276,7 +292,8 @@
     "sql": "SELECT customer_name AS cliente, COUNT(DISTINCT product_name) AS marcas_combinadas\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY customer_name\nORDER BY marcas_combinadas DESC\nLIMIT 10",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: customer_name"
+    "fallo_detalle": "no such column: customer_name",
+    "explicacion_juez": "La consulta SQL no coincide con el resultado de referencia porque: 1. La consulta SQL genera una tabla de clientes y marcas combinadas basada en el pedido, pero no especifica qué tipo de pedido se está buscando. La consulta SQL se basa en la columna \"order_status\" con valor 4, lo que podría indicar un pedido específico, pero no se especifica qué tipo de pedido se está buscando. 2. La consulta SQL no especifica qué tipo de pedido se está buscando. Por ejemplo, si se está buscando pedidos de una sola marca, la"
   },
   {
     "id": "N8",
@@ -293,7 +310,8 @@
     "sql": "SELECT store_name AS tienda, AVG(net_amount) AS gasto_promedio\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY store_name\nORDER BY gasto_promedio DESC\nLIMIT 1",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "forma 1x2 contra referencia 3x2"
+    "fallo_detalle": "forma 1x2 contra referencia 3x2",
+    "explicacion_juez": "El resultado obtenido no coincide con el de referencia debido a la diferencia en la agrupación de datos. En el SQL generado, se calcula el gasto promedio por tienda, mientras que en el de referencia se muestra el gasto promedio por orden y ticket promedio por tienda. Además, el SQL no incluye la información de las tiendas Baldwin Bikes y Santa Cruz Bikes, lo que podría explicar la diferencia en los resultados."
   },
   {
     "id": "N9",
@@ -310,7 +328,8 @@
     "sql": "SELECT category_name AS categoria, brand_name AS marca, COUNT(*) AS unidades\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY category_name, brand_name\nORDER BY unidades DESC\nLIMIT 10",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "agregación (('Count',), 2) contra referencia (('Count(DISTINCT)', 'Count(DISTINCT)', 'Count(DISTINCT)', 'Count(DISTINCT)', 'Sum', 'Sum', 'Sum', 'Sum'), 0)"
+    "fallo_detalle": "agregación (('Count',), 2) contra referencia (('Count(DISTINCT)', 'Count(DISTINCT)', 'Count(DISTINCT)', 'Count(DISTINCT)', 'Sum', 'Sum', 'Sum', 'Sum'), 0)",
+    "explicacion_juez": "El resultado obtenido no coincide con el de referencia debido a la diferencia en la estructura de las tablas utilizadas. En el resultado obtenido, se están agrupando por \"categoria\" y \"marca\", mientras que en el de referencia, se agrupan por \"dimension\" y \"nombre\". Además, el resultado de referencia incluye más categorías y marcas, lo que podría explicar la diferencia en la cantidad de filas y la presencia de algunas categorías y marcas que no aparecen en el resultado obtenido."
   },
   {
     "id": "N10",
@@ -327,7 +346,8 @@
     "sql": "SELECT ROUND(SUM(discount_amount), 2) AS perdida\nFROM v_order_lines\nWHERE order_status = 3\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "agregación (('Sum',), 0) contra referencia (('Count', 'Count', 'Count', 'Sum', 'Sum', 'Sum'), 0)"
+    "fallo_detalle": "agregación (('Sum',), 0) contra referencia (('Count', 'Count', 'Count', 'Sum', 'Sum', 'Sum'), 0)",
+    "explicacion_juez": "El resultado obtenido no coincide con el de referencia debido a que el SQL original solo considera los pedidos con estado de ordenación 3, que probablemente sean los pedidos que no se concretaron. Sin embargo, el resultado de referencia muestra una pérdida de dinero por todas las tiendas y por todos los meses del año, lo que indica que se están sumando pedidos que se concretaron. Además, el monto neto de la pérdida es mayor en el resultado de referencia, lo que sugiere que se están sumando más pedidos que se concretaron"
   },
   {
     "id": "A1",
@@ -344,7 +364,8 @@
     "sql": "SELECT store_name AS tienda, AVG(net_amount) AS ticket_promedio\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ticket_promedio DESC\nLIMIT 1",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "forma 1x2 contra referencia 3x2"
+    "fallo_detalle": "forma 1x2 contra referencia 3x2",
+    "explicacion_juez": "El resultado obtenido no coincide con el de referencia debido a que el SQL original excluye las ventas de Electric Bikes, mientras que el resultado de referencia incluye todas las ventas, incluyendo las de este tipo específico."
   },
   {
     "id": "A2",
@@ -361,7 +382,8 @@
     "sql": "SELECT brand_name AS marca, product_name AS producto, list_price AS precio, discount_amount AS descuento\nFROM v_order_lines\nJOIN products ON products.product_id = v_order_lines.product_id\nJOIN brands ON brands.brand_id = products.brand_id\nWHERE order_status = 4 AND brand_name = 'Trek'\nORDER BY discount_amount DESC\nLIMIT 10",
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "ambiguous column name: brand_name"
+    "fallo_detalle": "ambiguous column name: brand_name",
+    "explicacion_juez": "El resultado obtenido no coincide con el de referencia debido a la falta de agrupación de los precios y descuentos por marca en la consulta generada. La consulta solo muestra los productos más baratos de la marca Trek, ignorando la información sobre los precios y descuentos específicos de cada producto."
   },
   {
     "id": "A3",
@@ -378,7 +400,8 @@
     "sql": "SELECT staff_name AS vendedor, ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM v_order_lines\nWHERE order_status = 4 AND brand_name = 'Electric Bikes'\nGROUP BY staff_name\nORDER BY ingreso_neto DESC\nLIMIT 3",
     "respuesta": null,
     "fallo_categoria": "otro",
-    "fallo_detalle": "filas: esperadas 3, obtenidas 0"
+    "fallo_detalle": "filas: esperadas 3, obtenidas 0",
+    "explicacion_juez": "El resultado no coincide porque el SQL original no incluye la columna \"staff_name\" en la consulta, lo que hace que la salida sea una lista vacía. Además, el resultado de referencia muestra que Marcelene Boyer es el vendedor con ingreso neto más alto, lo que no se refleja en la consulta SQL."
   },
   {
     "id": "A4",
@@ -394,7 +417,8 @@
     "latencia_total_s": null,
     "sql": "SELECT SUM(net_amount) AS perdida\nFROM v_order_lines\nWHERE order_status = 3 AND customer_state = 'TX'\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B1",
@@ -410,7 +434,8 @@
     "latencia_total_s": 1.75,
     "sql": "SELECT COUNT(DISTINCT customer_id) AS clientes_n_y\nFROM customers\nWHERE state = 'NY'\nLIMIT 500",
     "respuesta": "El resultado (clientes n y) es 1,019.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B2",
@@ -426,7 +451,8 @@
     "latencia_total_s": 2.68,
     "sql": "SELECT SUM(net_total) AS ingreso_neto_total\nFROM v_orders\nWHERE order_status = 4 AND strftime('%Y', order_date) = '2017'\nLIMIT 500",
     "respuesta": "El resultado (ingreso neto total) es $3,346,972.65.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B3",
@@ -442,7 +468,8 @@
     "latencia_total_s": 13.17,
     "sql": "SELECT product_name AS producto, SUM(quantity) AS unidades\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY product_name\nORDER BY unidades DESC\nLIMIT 5",
     "respuesta": "Los 5 productos con más unidades vendidas son:\n\n1. Electra Cruiser 1 (24-Inch) - 2016: 290 unidades\n2. Electra Townie Original 7D EQ - 2016: 283 unidades\n3. Electra Townie Original 21D - 2016: 275 unidades\n4. Electra Girl's Hawaii 1 (16-inch) - 2015/2016: 264 unidades\n5. Surly Ice Cream Truck Frameset - 2016: 162 unidades",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B4",
@@ -458,7 +485,8 @@
     "latencia_total_s": 12.61,
     "sql": "SELECT order_status, COUNT(*) AS ordenes\nFROM v_orders\nGROUP BY order_status\nLIMIT 500",
     "respuesta": "El análisis de la información proporcionada revela que la cantidad de órdenes en cada estatus es la siguiente:\n\n1. Ordenes en el estatus \"Pendiente\": 62 órdenes.\n2. Ordenes en el estatus \"En proceso\": 63 órdenes.\n3. Ordenes en el estatus \"Rechazada\": 45 órdenes.\n4. Ordenes en el estatus \"Completada\": 1,445 órdenes.\n\nEsta información es crucial para la dirección de la cadena de tiendas de bicicletas, ya que permite identificar y abordar las áreas que requieren atención. Por ejemplo, si se observa que hay un alto número de órdenes en el estatus \"Pendiente\", podría sugerir la necesidad de mejorar la comunicación o la eficiencia en el proceso de aceptación de órdenes.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B5",
@@ -474,7 +502,8 @@
     "latencia_total_s": 21.4,
     "sql": "SELECT store_name AS tienda, ROUND(SUM(net_total), 2) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND strftime('%Y', order_date) = '2017'\nGROUP BY store_name\nORDER BY ingreso_neto DESC\nLIMIT 1",
     "respuesta": "La tienda Baldwin Bikes registró el mayor ingreso neto por ventas en 2017, con un total de $2,433,949.29.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B6",
@@ -490,7 +519,8 @@
     "latencia_total_s": 12.11,
     "sql": "SELECT category_name AS categoria, ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY category_name\nORDER BY ingreso_neto DESC\nLIMIT 500",
     "respuesta": "El ingreso neto de las ventas por categoría, de mayor a menor, es el siguiente:\n\n1. Mountain Bikes: $2,486,420.26\n2. Road Bikes: $1,327,155.64\n3. Cruisers Bicycles: $866,524.40\n4. Electric Bikes: $733,493.75\n5. Cyclocross Bicycles: $642,584.83\n6. Comfort Bicycles: $346,450.00\n7. Children Bicycles: $259,986.37",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B7",
@@ -507,7 +537,8 @@
     "sql": "SELECT store_name AS tienda, product_name AS producto, SUM(quantity) AS unidades\nFROM stocks\nJOIN products ON stocks.product_id = products.product_id\nGROUP BY tienda, producto\nORDER BY tienda, producto",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: store_name"
+    "fallo_detalle": "no such column: store_name",
+    "explicacion_juez": "El resultado no coincide porque el SQL original no incluye la columna \"store_name\" en la consulta de referencia, lo que hace que la consulta de referencia no muestre la información de tienda. Además, el resultado de la consulta original no especifica la cantidad de unidades, solo la suma total de las unidades en cada tienda."
   },
   {
     "id": "B8",
@@ -523,7 +554,8 @@
     "latencia_total_s": 2.13,
     "sql": "SELECT COUNT(*)\nFROM v_orders\nWHERE order_status = 4 AND strftime('%Y', order_date) = '2016'\nLIMIT 500",
     "respuesta": "El resultado (COUNT(*)) es 620.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B9",
@@ -539,7 +571,8 @@
     "latencia_total_s": 17.75,
     "sql": "SELECT strftime('%Y-%m', order_date) AS mes, SUM(net_total) AS ingreso_neto\nFROM v_orders\nWHERE order_status = 4 AND strftime('%Y', order_date) = '2017'\nGROUP BY mes\nORDER BY mes\nLIMIT 500",
     "respuesta": "El ingreso neto de las ventas por mes en 2017 fue de $285,616.48 en enero, seguido de $281,968.30 en febrero, $308,157.42 en marzo, $220,409.16 en abril, $263,044.76 en mayo, $375,577.53 en junio, $213,719.70 en julio, $273,336.59 en agosto, $293,405.26 en septiembre, $303,422.34 en octubre, $268,809.13 en noviembre y $259,505.98 en diciembre.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B10",
@@ -555,7 +588,8 @@
     "latencia_total_s": 2.77,
     "sql": "SELECT AVG(list_price) AS precio_promedio\nFROM products\nJOIN brands ON products.brand_id = brands.brand_id\nWHERE brand_name = 'Trek'\nLIMIT 500",
     "respuesta": "El resultado (precio promedio) es $2,500.06.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N1",
@@ -571,7 +605,8 @@
     "latencia_total_s": 17.47,
     "sql": "WITH p AS (\n    SELECT product_name, brand_name,\n           SUM(net_amount)      AS ingreso_neto,\n           SUM(discount_amount) AS descuento_cedido,\n           SUM(gross_amount)    AS ingreso_bruto\n    FROM v_order_lines\n    WHERE order_status = 4 AND discount > 0\n    GROUP BY product_name\n)\nSELECT * FROM (\n    SELECT 'Top ingreso neto' AS ranking, product_name AS producto, brand_name AS marca,\n           ROUND(ingreso_neto, 2) AS ingreso_neto, ROUND(descuento_cedido, 2) AS descuento_cedido,\n           ROUND(100.0 * descuento_cedido / ingreso_bruto, 2) AS pct_cedido\n    FROM p ORDER BY ingreso_neto DESC LIMIT 10\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Top % cedido' AS ranking, product_name, brand_name,\n           ROUND(ingreso_neto, 2), ROUND(descuento_cedido, 2),\n           ROUND(100.0 * descuento_cedido / ingreso_bruto, 2) AS pct_cedido\n    FROM p ORDER BY pct_cedido DESC, ingreso_neto DESC LIMIT 10\n)",
     "respuesta": "Estas tiendas están dejando sobre la mesa un total de $1,234,567.89 en descuentos en productos, lo que representa un 10.53% de los ingresos brutos totales.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N2",
@@ -587,7 +622,8 @@
     "latencia_total_s": 10.72,
     "sql": "WITH populares AS (\n    SELECT product_name, SUM(quantity) AS unidades_vendidas\n    FROM v_order_lines\n    WHERE order_status = 4\n    GROUP BY product_name\n    ORDER BY unidades_vendidas DESC\n    LIMIT 20\n),\nstock_tienda AS (\n    SELECT p.product_name, st.store_id, SUM(st.quantity) AS stock\n    FROM stocks st JOIN products p ON p.product_id = st.product_id\n    GROUP BY p.product_name, st.store_id\n)\nSELECT pop.product_name AS producto, pop.unidades_vendidas, s.store_name AS tienda,\n       sk.stock\nFROM populares pop\nJOIN stock_tienda sk ON sk.product_name = pop.product_name\nJOIN stores s        ON s.store_id = sk.store_id\nWHERE sk.stock < 5\nORDER BY sk.stock, pop.unidades_vendidas DESC",
     "respuesta": "Los productos más populares que están a punto de agotarse son los Surly Ice Cream Truck Frameset - 2016 y el Trek Remedy 29 Carbon Frameset - 2016, con 162 y 123 unidades vendidas respectivamente. Estos productos están disponibles en tiendas como Santa Cruz Bikes, Baldwin Bikes y Rowlett Bikes, donde la cantidad de stock es de 0 unidades.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N3",
@@ -603,7 +639,8 @@
     "latencia_total_s": 8.17,
     "sql": "SELECT staff_name AS vendedor, store_name AS tienda,\n       ROUND(SUM(net_amount), 2)  AS ingreso_neto,\n       SUM(quantity)              AS unidades,\n       COUNT(DISTINCT order_id)   AS ordenes\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC",
     "respuesta": "Los vendedores de bicicletas eléctricas con mayores ingresos netos son Marcelene Boyer y Venita Daniel, con un total de $271,184.17 y $261,795.84 respectivamente. Por otro lado, los vendedores con mayores ventas son Genna Serrano y Mireya Copeland, con 29 y 24 unidades vendidas, respectivamente.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N4",
@@ -619,7 +656,8 @@
     "latencia_total_s": 10.41,
     "sql": "WITH minimo AS (SELECT MIN(discount) AS d FROM order_items),\ngeneral AS (\n    SELECT customer_city, customer_state, AVG(discount) AS desc_prom,\n           SUM(net_amount) AS ingreso_total\n    FROM v_order_lines WHERE order_status = 4\n    GROUP BY customer_city, customer_state\n)\nSELECT l.customer_city AS ciudad, l.customer_state AS estado,\n       ROUND(SUM(l.net_amount), 2)  AS ingreso_neto_desc_minimo,\n       ROUND(100.0 * g.desc_prom, 2) AS descuento_promedio_pct,\n       ROUND(100.0 * SUM(l.net_amount) / g.ingreso_total, 2) AS pct_ingreso_desc_minimo\nFROM v_order_lines l\nJOIN general g ON g.customer_city = l.customer_city AND g.customer_state = l.customer_state\nWHERE l.order_status = 4 AND l.discount = (SELECT d FROM minimo)\nGROUP BY l.customer_city, l.customer_state\nORDER BY ingreso_neto_desc_minimo DESC\nLIMIT 10",
     "respuesta": "La ciudad que concentra las compras con el menor descuento es Floral Park, ubicada en el estado de Nueva York. Aquí, el ingreso neto con descuento es de $30,858.72, un descuento promedio del 10.06% y un porcentaje de ingreso del 45.86%.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N5",
@@ -635,7 +673,8 @@
     "latencia_total_s": 20.52,
     "sql": "SELECT * FROM (\n    SELECT store_name AS tienda, COUNT(*) AS ordenes_tarde,\n           ROUND(SUM(net_total), 2) AS monto_neto, ROUND(AVG(days_late), 2) AS dias_retraso_prom\n    FROM v_orders WHERE is_late = 1\n    GROUP BY store_id\n    ORDER BY monto_neto DESC\n)\nUNION ALL\nSELECT 'Total', COUNT(*), ROUND(SUM(net_total), 2), ROUND(AVG(days_late), 2)\nFROM v_orders WHERE is_late = 1",
     "respuesta": "Los envíos que llegan tarde y en tiendas de Baldwin Bikes y Santa Cruz Bikes son los más costosos, con un monto neto de $1,430,618.99 y $444,595.75, respectivamente. Las tiendas Rowlett Bikes y Total, que no especificamos, tienen un promedio de días de retraso de 1.32 y 1.33 días, respectivamente, lo que indica que estos envíos tardan más en llegar.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N6",
@@ -651,7 +690,8 @@
     "latencia_total_s": 14.11,
     "sql": "WITH ref AS (SELECT value AS fecha FROM db_metadata WHERE key = 'last_completed_date'),\nventana AS (\n    SELECT date(fecha, '-6 months', '+1 day') AS desde,\n           fecha AS hasta\n    FROM ref\n),\nvendidos_ventana AS (\n    SELECT DISTINCT product_name FROM v_order_lines, ventana\n    WHERE order_status = 4 AND order_date >= ventana.desde AND order_date <= ventana.hasta\n),\nvendidos_historico AS (\n    SELECT DISTINCT product_name FROM v_order_lines WHERE order_status = 4\n)\nSELECT p.product_name AS producto,\n       CASE WHEN p.product_name IN (SELECT product_name FROM vendidos_historico)\n            THEN 'Sin ventas recientes' ELSE 'Nunca vendido' END AS estado_inventario,\n       SUM(st.quantity) AS unidades_inmovilizadas,\n       MAX(p.list_price) AS precio_lista,\n       ROUND(SUM(st.quantity * p.list_price), 2) AS valor_inmovilizado\nFROM stocks st\nJOIN products p ON p.product_id = st.product_id\nJOIN stores s   ON s.store_id = st.store_id\nWHERE st.quantity > 0\n  AND p.product_name NOT IN (SELECT product_name FROM vendidos_ventana)\nGROUP BY p.product_name\nORDER BY valor_inmovilizado DESC",
     "respuesta": "En nuestra bodega, tenemos 29 productos que llevan meses sin moverse, incluyendo los que nunca han sido vendidos. Estos productos representan un capital de $241,999.56.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N7",
@@ -667,7 +707,8 @@
     "latencia_total_s": 9.08,
     "sql": "SELECT c.first_name || ' ' || c.last_name AS cliente, o.customer_city AS ciudad,\n       COUNT(*) AS ordenes_multimarca, MAX(o.n_brands) AS max_marcas\nFROM v_orders o\nJOIN customers c ON c.customer_id = o.customer_id\nWHERE o.order_status = 4 AND o.n_brands >= 2\nGROUP BY o.customer_id\nORDER BY ordenes_multimarca DESC, max_marcas DESC, cliente",
     "respuesta": "El análisis de los datos revela que las clientes Alesia Horne, Erlinda Humphrey, Ernest Rollins, Pinkie Kirkland, Saturnina Garner, Tenisha Lyons, Abby Gamble, Adelaida Hancock, Alejandrina Hodges, Alexandria Zamora, Alishia Elliott, Allison Nolan, Alpha King, Amina Salazar y Ann Heath tienen una combinación de marcas en sus pedidos superiores a las esperadas, con hasta 5 marcas distintas en un solo pedido.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N8",
@@ -683,7 +724,8 @@
     "latencia_total_s": 18.24,
     "sql": "SELECT store_name AS tienda, COUNT(*) AS ordenes,\n       ROUND(AVG(net_total), 2) AS ticket_promedio\nFROM v_orders\nWHERE order_status = 4\nGROUP BY store_id\nORDER BY ticket_promedio DESC",
     "respuesta": "El cliente promedio en Rowlett Bikes gasta $4,971.23 por pedido, lo que representa un 11% de aumento en comparación con el ticket promedio en Baldwin Bikes ($4,613.55). En cambio, en Santa Cruz Bikes, el cliente promedio asciende a $4,420.75, lo que demuestra una diferencia de 10% en comparación con Rowlett Bikes.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N9",
@@ -699,7 +741,8 @@
     "latencia_total_s": 11.32,
     "sql": "SELECT * FROM (\n    SELECT 'Categoría' AS dimension, category_name AS nombre, SUM(quantity) AS unidades,\n           COUNT(DISTINCT strftime('%Y-%m', order_date)) AS meses_con_ventas,\n           ROUND(1.0 * SUM(quantity) / COUNT(DISTINCT strftime('%Y-%m', order_date)), 2) AS rotacion_mensual\n    FROM v_order_lines WHERE order_status = 4\n    GROUP BY category_name\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Marca', brand_name, SUM(quantity),\n           COUNT(DISTINCT strftime('%Y-%m', order_date)),\n           ROUND(1.0 * SUM(quantity) / COUNT(DISTINCT strftime('%Y-%m', order_date)), 2)\n    FROM v_order_lines WHERE order_status = 4\n    GROUP BY brand_name\n)\nORDER BY dimension, rotacion_mensual",
     "respuesta": "La salida más lenta del catálogo se encuentra en las categorías de Electric Bikes, Cyclocross Bicycles y Comfort Bicycles, con rotaciones mensuales de 9.69, 13.52 y 27.15 respectivamente. Por otro lado, las marcas Strider y Heller tienen las ventas más lentas, con rotaciones mensuales de 4.33 y 5.20, respectivamente.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N10",
@@ -715,7 +758,8 @@
     "latencia_total_s": 10.52,
     "sql": "SELECT * FROM (\n    SELECT 'Total' AS nivel, 'Todas' AS detalle, COUNT(*) AS ordenes,\n           ROUND(SUM(net_total), 2) AS monto_neto_perdido\n    FROM v_orders WHERE order_status = 3\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Tienda', store_name, COUNT(*), ROUND(SUM(net_total), 2)\n    FROM v_orders WHERE order_status = 3\n    GROUP BY store_id ORDER BY 4 DESC\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Mes', strftime('%Y-%m', order_date), COUNT(*), ROUND(SUM(net_total), 2)\n    FROM v_orders WHERE order_status = 3\n    GROUP BY 2 ORDER BY 2\n)",
     "respuesta": "En los últimos meses, perdimos $10,145.29 debido a pedidos que no se concretaron en las tiendas de Rowlett Bikes, Baldwin Bikes y Santa Cruz Bikes. Además, en el mes de febrero de 2016, perdimos $12,830.27 debido a un total de 4 órdenes.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "A1",
@@ -732,7 +776,8 @@
     "sql": "SELECT store_name AS tienda, COUNT(*) AS ordenes,\n       ROUND(AVG(net_total), 2) AS ticket_promedio\nFROM v_orders\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY store_name\nORDER BY ticket_promedio DESC\nLIMIT 500",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: category_name"
+    "fallo_detalle": "no such column: category_name",
+    "explicacion_juez": "El resultado obtenido no coincide con el de referencia debido a que la consulta SQL excluye las ventas de Electric Bikes, lo que no es el caso en la consulta de referencia. Además, la consulta SQL no agrupa por tienda, lo que podría explicar la diferencia en los resultados."
   },
   {
     "id": "A2",
@@ -748,7 +793,8 @@
     "latencia_total_s": 33.21,
     "sql": "WITH p AS (\n    SELECT product_name, brand_name,\n           SUM(net_amount)      AS ingreso_neto,\n           SUM(discount_amount) AS descuento_cedido,\n           SUM(gross_amount)    AS ingreso_bruto\n    FROM v_order_lines\n    WHERE order_status = 4 AND brand_name = 'Trek' AND discount > 0\n    GROUP BY product_name\n)\nSELECT * FROM (\n    SELECT 'Top descuento cedido' AS ranking, product_name AS producto, brand_name AS marca,\n           ROUND(descuento_cedido, 2) AS descuento_cedido, ingreso_neto AS ingreso_neto\n    FROM p ORDER BY descuento_cedido DESC, ingreso_neto DESC LIMIT 10\n)\nLIMIT 500",
     "respuesta": "Los productos de la marca Trek que cuestan más en descuentos son:\n\n1. **Trek Slash 8 27.5 - 2016** con un descuento cedido de $59,679.85, generando un ingreso neto de $544,318.64.\n2. **Trek Fuel EX 8 29 - 2016** con un descuento cedido de $45,384.84, generando un ingreso neto de $354,813.78.\n3. **Trek Conduit+ - 2016** con un descuento cedido de $44,849.85, generando un ingreso neto de $381,148.73.\n4. **Trek Domane SLR 6 Disc - 2017** con un descuento cedido de $22,219.96, generando un ingreso neto de $181,279.67.\n5. **Trek Remedy",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "A3",
@@ -764,7 +810,8 @@
     "latencia_total_s": 18.3,
     "sql": "SELECT staff_name AS vendedor, store_name AS tienda,\n       ROUND(SUM(net_amount), 2)  AS ingreso_neto,\n       SUM(quantity)              AS unidades,\n       COUNT(DISTINCT order_id)   AS ordenes\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC\nLIMIT 3",
     "respuesta": "El vendedor Marcelene Boyer, de Baldwin Bikes, lidera el top 3 con un ingreso neto de $271,184.17, vendiendo 92 bicicletas y generando 55 órdenes. Venita Daniel, también de Baldwin Bikes, se encuentra en segundo lugar con un ingreso de $261,795.84, vendiendo 85 bicicletas y 55 órdenes. Por último, Genna Serrano, de Santa Cruz Bikes, obtiene el tercer lugar con un ingreso neto de $79,671.34, vendiendo 29 bicicletas y 19 órdenes.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "A4",
@@ -780,7 +827,8 @@
     "latencia_total_s": 11.38,
     "sql": "SELECT \n    'Total' AS nivel, \n    'Todas' AS detalle, \n    COUNT(*) AS ordenes, \n    ROUND(SUM(net_total), 2) AS monto_neto_perdido\nFROM \n    v_orders \nWHERE \n    order_status = 3 \n    AND customer_state = 'TX'\nLIMIT 500",
     "respuesta": "Por las órdenes rechazadas de clientes de Texas, perdemos un total de $86,018.94.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B1",
@@ -796,7 +844,8 @@
     "latencia_total_s": null,
     "sql": "SELECT COUNT(*) AS clientes\nFROM customers\nWHERE state = 'NY'\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B2",
@@ -813,7 +862,8 @@
     "sql": "SELECT *\nFROM v_orders\nWHERE strftime('%Y', order_date) = '2017'\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "forma 500x22 contra referencia 1x1"
+    "fallo_detalle": "forma 500x22 contra referencia 1x1",
+    "explicacion_juez": "La diferencia entre el resultado obtenido y el resultado de referencia se debe a que el ingreso neto total de las ventas en 2017 no se calculó correctamente. En la consulta SQL, se utilizó la función `strftime('%Y', order_date)` para filtrar las ventas que ocurrieron en 2017, pero no se utilizó la función `strftime('%Y', required_date)` para filtrar las ventas que requerían ser completadas en 2017. Esto significa que se incluyeron ventas que no requerían ser completadas en 2017, lo que"
   },
   {
     "id": "B3",
@@ -829,7 +879,8 @@
     "latencia_total_s": null,
     "sql": "SELECT p.product_name AS producto, SUM(ql.quantity) AS unidades\nFROM v_order_lines ql\nJOIN products p ON p.product_id = ql.product_id\nWHERE order_status = 4\nGROUP BY p.product_name\nORDER BY unidades DESC\nLIMIT 5",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B4",
@@ -845,7 +896,8 @@
     "latencia_total_s": null,
     "sql": "SELECT \n  order_status, \n  COUNT(*) AS cantidad \nFROM \n  v_orders \nWHERE \n  order_status IN (1, 2, 3, 4) \nGROUP BY \n  order_status\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B5",
@@ -861,7 +913,8 @@
     "latencia_total_s": null,
     "sql": "SELECT s.store_name, ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM v_order_lines o\nJOIN v_orders v ON o.order_id = v.order_id\nJOIN stores s ON v.store_id = s.store_id\nWHERE strftime('%Y', o.order_date) = '2017'\nGROUP BY s.store_name\nORDER BY ingreso_neto DESC\nLIMIT 1",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B6",
@@ -877,7 +930,8 @@
     "latencia_total_s": null,
     "sql": "SELECT \n  category_name AS categoria, \n  ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM \n  v_order_lines\nWHERE \n  order_status = 4\nGROUP BY \n  category_name\nORDER BY \n  ingreso_neto DESC\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B7",
@@ -894,7 +948,8 @@
     "sql": "SELECT s.store_name, s.store_id, st.quantity, COALESCE(st.quantity_in_stock, 0) AS quantity_in_stock\nFROM stocks st\nJOIN stores s ON s.store_id = st.store_id\nWHERE s.store_name IN ('Baldwin Bikes', 'Rowlett Bikes', 'Santa Cruz Bikes')\nORDER BY s.store_name, s.store_id\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: st.quantity_in_stock"
+    "fallo_detalle": "no such column: st.quantity_in_stock",
+    "explicacion_juez": "La razón por la que no coinciden es que la consulta SQL no está utilizando la función `SUM` para calcular el número total de unidades en inventario en cada tienda. En lugar de sumar las unidades en stock de cada tienda, la consulta solo muestra la cantidad de unidades en stock de cada tienda individualmente."
   },
   {
     "id": "B8",
@@ -910,7 +965,8 @@
     "latencia_total_s": null,
     "sql": "SELECT COUNT(*) AS total\nFROM v_orders\nWHERE strftime('%Y', order_date) = '2016' AND order_status = 4\nLIMIT 500",
     "respuesta": null,
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B9",
@@ -927,7 +983,8 @@
     "sql": "SELECT \n  strftime('%Y', order_date) AS mes,\n  ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM \n  v_orders\n  JOIN v_order_lines ON v_orders.order_id = v_order_lines.order_id\nGROUP BY \n  strftime('%Y', order_date)\nORDER BY \n  ingreso_neto DESC\nLIMIT 1",
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "ambiguous column name: order_date"
+    "fallo_detalle": "ambiguous column name: order_date",
+    "explicacion_juez": "La consulta SQL que se ejecutó no encontró el ingreso neto de las ventas por mes en 2017 porque la fecha de la orden no se puede utilizar para calcular el ingreso neto."
   },
   {
     "id": "B10",
@@ -944,7 +1001,8 @@
     "sql": "SELECT \n  AVG(list_price * quantity) AS precio_promedio\nFROM \n  v_order_lines\nWHERE \n  brand_name = 'Trek'\n  AND strftime('%Y', order_date) = '2016'\n  AND strftime('%Y-%m', order_date) IN (\n    SELECT \n      strftime('%Y', order_date) \n    FROM \n      v_order_lines\n    WHERE \n      order_status = 4\n  )\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "filtro_incorrecto",
-    "fallo_detalle": "filtros distintos: faltan [], sobran ['estado=4', 'fecha=2016']"
+    "fallo_detalle": "filtros distintos: faltan [], sobran ['estado=4', 'fecha=2016']",
+    "explicacion_juez": "La diferencia entre el resultado obtenido y el de referencia se debe a que la consulta SQL no considera los productos de la marca Trek que no cumplen con los criterios de filtro (`strftime('%Y', order_date) = '2016'` y `strftime('%Y-%m', order_date) IN ...`)."
   },
   {
     "id": "N1",
@@ -961,7 +1019,8 @@
     "sql": "SELECT \n  p.product_name AS producto, \n  ROUND(SUM(CASE WHEN d.discount > 0 THEN d.discount_amount ELSE 0 END), 2) AS descuento,\n  ROUND(SUM(CASE WHEN d.discount > 0 THEN d.gross_amount ELSE 0 END), 2) AS ingreso_descontado,\n  ROUND(SUM(CASE WHEN d.discount > 0 THEN d.net_amount ELSE 0 END), 2) AS ingreso_neto\nFROM \n  v_order_lines o\n  v_products p\n  JOIN v_discounts d ON o.product_id = d.product_id\nGROUP BY \n  p.product_name",
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "SQL con errores de sintaxis: Invalid expression / Unexpected token. Line 8, Col: 12."
+    "fallo_detalle": "SQL con errores de sintaxis: Invalid expression / Unexpected token. Line 8, Col: 12.",
+    "explicacion_juez": "La razón por la que no coinciden es que la consulta SQL no está utilizando la función `ROUND` correctamente. La función `ROUND` en SQL devuelve un valor entero, pero en este caso, se está utilizando para convertir números decimales a números enteros."
   },
   {
     "id": "N2",
@@ -978,7 +1037,8 @@
     "sql": "SELECT p.product_name AS producto, \n       SUM(CASE WHEN s.store_name = 'Baldwin Bikes' THEN 1 ELSE 0 END) AS cantidad\nFROM v_order_lines o\nJOIN v_stocks s ON o.product_id = s.product_id\nJOIN products p ON s.product_id = p.product_id\nWHERE o.order_status = 4\nGROUP BY p.product_name\nHAVING SUM(CASE WHEN s.store_name = 'Baldwin Bikes' THEN 1 ELSE 0 END) > 10\nORDER BY cantidad DESC\nLIMIT 10",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "La tabla o vista 'v_stocks' no existe."
+    "fallo_detalle": "La tabla o vista 'v_stocks' no existe.",
+    "explicacion_juez": "La razón por la que la consulta no se ejecutó es que no se proporcionó la información necesaria para realizar la consulta. En particular, no se proporcionó la información sobre las tiendas que venden los productos mencionados en la consulta."
   },
   {
     "id": "N3",
@@ -995,7 +1055,8 @@
     "sql": "SELECT \n  p.product_name AS producto, \n  s.store_name AS tienda, \n  COUNT(*) AS ordenes, \n  ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM \n  v_order_lines v\n  JOIN products p ON v.product_id = p.product_id\n  JOIN stocks s ON p.product_id = s.product_id\n  JOIN stores s ON s.store_id = s.store_id\nWHERE \n  v.order_status = 4 AND strftime('%Y', v.order_date) = '2018'\nGROUP BY \n  p.product_name, \n  s.store_name\nORDER BY \n  ingreso_neto DESC\nLIMIT 3",
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "ambiguous column name: s.store_id"
+    "fallo_detalle": "ambiguous column name: s.store_id",
+    "explicacion_juez": "La consulta que se te proporcionó parece estar buscando los mejores vendedores de bicicletas eléctricas en el año 2018, pero no se ejecuta correctamente debido a varios problemas: 1. **Falta de filtro por vendedor**: La consulta no incluye un filtro para seleccionar solo los vendedores, lo que significa que cualquier vendedor que haya vendido al menos una bicicleta eléctrica en 2018 podría aparecer en la lista. 2. **Falta de filtro por tienda**: La consulta no incluye un filtro para"
   },
   {
     "id": "N4",
@@ -1012,7 +1073,8 @@
     "sql": "SELECT \n  c.city, \n  SUM(o.net_amount) AS total_ventas, \n  SUM(o.net_amount * (1 - o.discount_amount)) AS total_descuento, \n  SUM(o.net_amount * (1 - o.discount_amount)) / SUM(o.net_amount) AS porcentaje_descuento\nFROM \n  v_orders o\n  JOIN v_order_lines l ON o.order_id = l.order_id\n  JOIN products p ON l.product_id = p.product_id\n  JOIN categories c ON p.category_id = c.category_id\nWHERE \n  o.order_status = 4\nGROUP BY \n  c.city\nORDER BY \n  porcentaje_descuento DESC\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: c.city"
+    "fallo_detalle": "no such column: c.city",
+    "explicacion_juez": "La consulta no se ejecutó porque no se proporcionó la información necesaria para realizar la búsqueda. La consulta se realizó con la siguiente información: * `o.order_status = 4`: Esto indica que se están considerando las compras que han sido completadas y no están en la etapa de espera. * `GROUP BY c.city`: Esto indica que se están agrupando los resultados por la ciudad. * `ORDER BY porcentaje_descuento DESC`: Esto indica que se están ordenando los resultados por el porcentaje de descuento. * `LIMIT 500`: Esto"
   },
   {
     "id": "N5",
@@ -1029,7 +1091,8 @@
     "sql": "SELECT \n  s.store_name, \n  COUNT(*) AS cantidad_ordenes, \n  ROUND(SUM(CASE WHEN strftime('%Y', order_date) = '2017' THEN 1 ELSE 0 END), 2) AS porcentaje_ordenes\nFROM \n  v_orders \n  JOIN stores s ON s.store_id = v_orders.store_id\nWHERE \n  strftime('%Y', order_date) = '2017'\nGROUP BY \n  s.store_name\nORDER BY \n  porcentaje_ordenes DESC\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "agregación (('Count', 'Sum'), 1) contra referencia (('Avg', 'Avg', 'Count', 'Count', 'Sum', 'Sum'), 0)"
+    "fallo_detalle": "agregación (('Count', 'Sum'), 1) contra referencia (('Avg', 'Avg', 'Count', 'Count', 'Sum', 'Sum'), 0)",
+    "explicacion_juez": "La diferencia entre el resultado obtenido y el de referencia se debe a que se está considerando solo los tiendas que tienen más de 500 filas de resultados, mientras que el resultado de referencia incluye todas las tiendas, independientemente de su número de filas."
   },
   {
     "id": "N6",
@@ -1046,7 +1109,8 @@
     "sql": "SELECT \n  p.product_name AS producto, \n  ROUND(SUM(st.quantity), 2) AS stock, \n  ROUND(SUM(st.quantity * p.list_price), 2) AS ingreso_neto\nFROM \n  stocks st\nJOIN \n  products p ON p.product_id = st.product_id\nWHERE \n  st.quantity = 0 AND strftime('%Y', st.order_date) = '2018'\nGROUP BY \n  p.product_name, \n  ROUND(SUM(st.quantity), 2) AS stock, \n  ROUND(SUM(st.quantity * p.list_price), 2) AS ingreso_neto\nORDER BY \n  stock DESC\nLIMIT 1",
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "SQL con errores de sintaxis: Invalid expression / Unexpected token. Line 13, Col: 31."
+    "fallo_detalle": "SQL con errores de sintaxis: Invalid expression / Unexpected token. Line 13, Col: 31.",
+    "explicacion_juez": "La consulta no se ejecutó porque no se encontraron registros de productos que estén en bodega y no hayan sido movidos durante meses."
   },
   {
     "id": "N7",
@@ -1063,7 +1127,8 @@
     "sql": "SELECT \n  c.first_name, \n  c.last_name, \n  COUNT(DISTINCT p.product_id) AS cantidad_productos\nFROM \n  customers c\n  JOIN orders o ON c.customer_id = o.customer_id\n  JOIN order_items oi ON o.order_id = oi.order_id\n  JOIN products p ON oi.product_id = p.product_id\nGROUP BY \n  c.first_name, \n  c.last_name\nHAVING \n  COUNT(DISTINCT p.product_id) > 1\nORDER BY \n  cantidad_productos DESC\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "agregación (('Count(DISTINCT)', 'Count(DISTINCT)'), 2) contra referencia (('Count', 'Max'), 1)"
+    "fallo_detalle": "agregación (('Count(DISTINCT)', 'Count(DISTINCT)'), 2) contra referencia (('Count', 'Max'), 1)",
+    "explicacion_juez": "La diferencia principal entre los resultados obtenidos y el de referencia es que el resultado de referencia muestra que solo hay un cliente que ha realizado múltiples pedidos de marcas diferentes, mientras que el resultado obtenido muestra que hay varios clientes que han realizado múltiples pedidos de marcas diferentes."
   },
   {
     "id": "N8",
@@ -1080,7 +1145,8 @@
     "sql": "SELECT AVG(total) AS promedio\nFROM pedidos\nJOIN pedidos_clientes ON pedidos.id = pedidos_clientes.pedido_id\nJOIN clientes ON pedidos_clientes.cliente_id = clientes.id\nJOIN inventarios ON pedidos_clientes.producto_id = inventarios.producto_id\nJOIN productos ON inventarios.producto_id = productos.id\nWHERE pedidos.status = 4 AND strftime('%Y', pedidos.pedido_date) = '2018'",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "La tabla o vista 'pedidos' no existe."
+    "fallo_detalle": "La tabla o vista 'pedidos' no existe.",
+    "explicacion_juez": "La razón por la que no coinciden es que la consulta SQL que se ejecutó no encontró los pedidos que corresponden a los clientes que tienen un pedido con un status de 4 (compra) y que se han realizado en el año 2018."
   },
   {
     "id": "N9",
@@ -1097,7 +1163,8 @@
     "sql": "SELECT \n  c.category_name, \n  m.brand_name, \n  COUNT(v_order_lines.order_id) AS cantidad\nFROM \n  v_order_lines \n  JOIN v_orders ON v_order_lines.order_id = v_orders.order_id\n  JOIN categorias c ON v_orders.store_id = c.category_id\n  JOIN marcas m ON v_orders.brand_id = m.brand_id\nWHERE \n  v_orders.order_status = 4 AND strftime('%Y', v_orders.order_date) = '2018'\nGROUP BY \n  c.category_name, \n  m.brand_name\nORDER BY \n  cantidad DESC\nLIMIT 1",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "La tabla o vista 'categorias' no existe."
+    "fallo_detalle": "La tabla o vista 'categorias' no existe.",
+    "explicacion_juez": "La razón por la que la consulta no se ejecutó es que la condición `WHERE` `v_orders.order_status = 4` no es válida en la tabla `v_order_lines`. La tabla `v_order_lines` tiene una columna `order_status` que no tiene un valor específico para la condición `4`."
   },
   {
     "id": "N10",
@@ -1114,7 +1181,8 @@
     "sql": "SELECT SUM(net_amount) AS costo\nFROM v_order_lines\nWHERE order_status = 3 AND strftime('%Y', order_date) = '2016'\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "agregación (('Sum',), 0) contra referencia (('Count', 'Count', 'Count', 'Sum', 'Sum', 'Sum'), 0)"
+    "fallo_detalle": "agregación (('Sum',), 0) contra referencia (('Count', 'Count', 'Count', 'Sum', 'Sum', 'Sum'), 0)",
+    "explicacion_juez": "La diferencia entre el resultado obtenido y el de referencia se debe a que se han considerado todos los pedidos que se han completado y se han completado, pero no se han completado. En otras palabras, se han considerado todos los pedidos que se han completado, pero no se han completado, por lo que se han perdido."
   },
   {
     "id": "A1",
@@ -1131,7 +1199,8 @@
     "sql": "SELECT AVG(CASE WHEN T1.brand_name = 'Electra' THEN T1.net_amount ELSE 0 END) AS ticket_promedio\nFROM v_order_lines T1\nJOIN v_orders T2 ON T1.order_id = T2.order_id\nWHERE T2.order_status = 4 AND T2.order_date LIKE '%Electric Bikes%'\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "forma 1x1 contra referencia 3x2"
+    "fallo_detalle": "forma 1x1 contra referencia 3x2",
+    "explicacion_juez": "La diferencia entre el resultado obtenido y el de referencia se debe a que el ticket promedio se calcula solo para las ventas de Electric Bikes, pero no se considera el ticket promedio de las otras tiendas."
   },
   {
     "id": "A2",
@@ -1148,7 +1217,8 @@
     "sql": "SELECT ROUND(SUM(net_amount) * 0.1, 2) AS descuento\nFROM v_order_lines\nWHERE strftime('%Y', v_order_lines.order_date) = '2018'\n  AND strftime('%Y', v_order_lines.order_date) = '2018'\nGROUP BY v_order_lines.item_id\nORDER BY ROUND(SUM(net_amount) * 0.1, 2) DESC\nLIMIT 3",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "agregación (('Sum', 'Sum'), 1) contra referencia (('Sum',), 1)"
+    "fallo_detalle": "agregación (('Sum', 'Sum'), 1) contra referencia (('Sum',), 1)",
+    "explicacion_juez": "La diferencia entre los resultados obtenidos y el de referencia se debe a que se está considerando solo los productos de la marca Trek que se han realizado en 2018, mientras que el resultado de referencia incluye todos los productos de la marca Trek, independientemente de la fecha de realización."
   },
   {
     "id": "A3",
@@ -1165,7 +1235,8 @@
     "sql": "SELECT brand_name AS marca, ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY brand_name\nORDER BY ingreso_neto DESC\nLIMIT 3",
     "respuesta": null,
     "fallo_categoria": "filtro_incorrecto",
-    "fallo_detalle": "filtros distintos: faltan ['texto=electric bikes'], sobran []"
+    "fallo_detalle": "filtros distintos: faltan ['texto=electric bikes'], sobran []",
+    "explicacion_juez": "La diferencia entre el resultado obtenido y el de referencia se debe a que la pregunta especifica que se buscan los top 3 de vendedores de bicicletas eléctricas por ingreso neto, pero no se especifica si se deben considerar los ingresos netos totales o solo los ingresos netos de los vendedores."
   },
   {
     "id": "A4",
@@ -1182,7 +1253,8 @@
     "sql": "SELECT \n  o.order_id, \n  o.order_date, \n  o.order_status, \n  o.status_label, \n  o.store_id, \n  o.store_name, \n  o.staff_id, \n  o.staff_name, \n  o.customer_id, \n  o.customer_city, \n  o.customer_state, \n  o.n_items, \n  o.total_quantity, \n  o.n_brands, \n  o.gross_total, \n  o.discount_total, \n  o.net_total, \n  o.is_shipped, \n  o.is_late, \n  o.days_late \nFROM \n  v_orders o \nWHERE \n  o.order_status = 3 \n  AND o.customer_state = 'TX'\n  AND o.order_date >= strftime('%Y-%m-%d', 'now')\n  AND o.order_date <= strftime('%Y-%m-%d', 'now + 1 year')\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "filtro_incorrecto",
-    "fallo_detalle": "filtros distintos: faltan [], sobran ['texto=now', 'texto=now + 1 year']"
+    "fallo_detalle": "filtros distintos: faltan [], sobran ['texto=now', 'texto=now + 1 year']",
+    "explicacion_juez": "La razón por la que el resultado obtenido no coincide con el de referencia es que la fecha de referencia se ha establecido como el 1 de enero de 2024, pero la fecha de referencia de los registros de órdenes rechazadas se ha establecido como el 1 de enero de 2023. Esto significa que los registros de órdenes rechazadas se han realizado antes de la fecha de referencia establecida, por lo que no se incluyen en el resultado obtenido."
   },
   {
     "id": "B1",
@@ -1198,7 +1270,8 @@
     "latencia_total_s": 2.28,
     "sql": "SELECT COUNT(*) AS clientes\nFROM customers\nWHERE state = 'NY'\nLIMIT 500",
     "respuesta": "El resultado (clientes) es 1,019.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B2",
@@ -1215,7 +1288,8 @@
     "sql": "SELECT *\nFROM v_orders\nWHERE strftime('%Y', order_date) = '2017'\nLIMIT 500",
     "respuesta": "* Ingreso neto total de las ventas en 2017: $ 2,441,456.00",
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "forma 500x22 contra referencia 1x1"
+    "fallo_detalle": "forma 500x22 contra referencia 1x1",
+    "explicacion_juez": "La diferencia entre el resultado obtenido y el resultado de referencia se debe a que el ingreso neto total de las ventas en 2017 no se calculó correctamente. En la consulta SQL, se utilizó la función `strftime('%Y', order_date)` para filtrar las ventas que ocurrieron en 2017, pero no se utilizó la función `strftime('%Y', required_date)` para filtrar las ventas que requerían ser completadas en 2017. Esto significa que se incluyeron ventas que no requerían ser completadas en 2017, lo que"
   },
   {
     "id": "B3",
@@ -1231,7 +1305,8 @@
     "latencia_total_s": 16.67,
     "sql": "SELECT p.product_name AS producto, SUM(ql.quantity) AS unidades\nFROM v_order_lines ql\nJOIN products p ON p.product_id = ql.product_id\nWHERE order_status = 4\nGROUP BY p.product_name\nORDER BY unidades DESC\nLIMIT 5",
     "respuesta": "**Productos con más unidades vendidas**\n\nLos 5 productos con más unidades vendidas son:\n\n1.  Electra Townie Original 7D EQ - 2016 (290 unidades)\n2.  Electra Townie Original 21D - 2016 (275 unidades)\n3.  Electra Girl's Hawaii 1 (16-inch) - 2015/2016 (264 unidades)\n4.  Electra Cruiser 1 (24-Inch) - 2016 (290 unidades)\n5.  Surly Ice Cream Truck Frameset - 2016 (162 unidades)",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B4",
@@ -1247,7 +1322,8 @@
     "latencia_total_s": 9.25,
     "sql": "SELECT \n  order_status, \n  COUNT(*) AS cantidad \nFROM \n  v_orders \nWHERE \n  order_status IN (1, 2, 3, 4) \nGROUP BY \n  order_status\nLIMIT 500",
     "respuesta": "La respuesta es: 1,445",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B5",
@@ -1263,7 +1339,8 @@
     "latencia_total_s": 28.59,
     "sql": "SELECT s.store_name, ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM v_order_lines o\nJOIN v_orders v ON o.order_id = v.order_id\nJOIN stores s ON v.store_id = s.store_id\nWHERE strftime('%Y', o.order_date) = '2017'\nGROUP BY s.store_name\nORDER BY ingreso_neto DESC\nLIMIT 1",
     "respuesta": "La tienda con el mayor ingreso neto por ventas en 2017 fue Baldwin Bikes, con un ingreso neto de $2,479,688.40.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B6",
@@ -1279,7 +1356,8 @@
     "latencia_total_s": 16.27,
     "sql": "SELECT \n  category_name AS categoria, \n  ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM \n  v_order_lines\nWHERE \n  order_status = 4\nGROUP BY \n  category_name\nORDER BY \n  ingreso_neto DESC\nLIMIT 500",
     "respuesta": "**Ingresos netos por categoría**\n\n| categoria | ingreso_neto |\n|---|---|\n| Mountain Bikes | $2,486,420.26 |\n| Road Bikes | $1,327,155.64 |\n| Cruisers Bicycles | $866,524.40 |\n| Electric Bikes | $733,493.75 |\n| Cyclocross Bicycles | $642,584.83 |\n| Comfort Bicycles | $346,450.00 |\n| Children Bicycles | $259,986.37 |",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B7",
@@ -1296,7 +1374,8 @@
     "sql": "SELECT s.store_name, s.store_id, st.quantity, COALESCE(st.quantity_in_stock, 0) AS quantity_in_stock\nFROM stocks st\nJOIN stores s ON s.store_id = st.store_id\nWHERE s.store_name IN ('Baldwin Bikes', 'Rowlett Bikes', 'Santa Cruz Bikes')\nORDER BY s.store_name, s.store_id\nLIMIT 500",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: st.quantity_in_stock"
+    "fallo_detalle": "no such column: st.quantity_in_stock",
+    "explicacion_juez": "La razón por la que no coinciden es que la consulta SQL no está utilizando la función `SUM` para calcular el número total de unidades en inventario en cada tienda. En lugar de sumar las unidades en stock de cada tienda, la consulta solo muestra la cantidad de unidades en stock de cada tienda individualmente."
   },
   {
     "id": "B8",
@@ -1312,7 +1391,8 @@
     "latencia_total_s": 6.46,
     "sql": "SELECT COUNT(*) AS total\nFROM v_orders\nWHERE strftime('%Y', order_date) = '2016' AND order_status = 4\nLIMIT 500",
     "respuesta": "El resultado (total) es 620.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B9",
@@ -1329,7 +1409,8 @@
     "sql": "SELECT \n  strftime('%Y', order_date) AS mes,\n  ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM \n  v_orders\n  JOIN v_order_lines ON v_orders.order_id = v_order_lines.order_id\nGROUP BY \n  strftime('%Y', order_date)\nORDER BY \n  ingreso_neto DESC\nLIMIT 1",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "ambiguous column name: order_date"
+    "fallo_detalle": "ambiguous column name: order_date",
+    "explicacion_juez": "La consulta SQL que se ejecutó no encontró el ingreso neto de las ventas por mes en 2017 porque la fecha de la orden no se puede utilizar para calcular el ingreso neto."
   },
   {
     "id": "B10",
@@ -1346,7 +1427,8 @@
     "sql": "SELECT \n  AVG(list_price * quantity) AS precio_promedio\nFROM \n  v_order_lines\nWHERE \n  brand_name = 'Trek'\n  AND strftime('%Y', order_date) = '2016'\n  AND strftime('%Y-%m', order_date) IN (\n    SELECT \n      strftime('%Y', order_date) \n    FROM \n      v_order_lines\n    WHERE \n      order_status = 4\n  )\nLIMIT 500",
     "respuesta": "El resultado (precio promedio) es sin dato.",
     "fallo_categoria": "filtro_incorrecto",
-    "fallo_detalle": "filtros distintos: faltan [], sobran ['estado=4', 'fecha=2016']"
+    "fallo_detalle": "filtros distintos: faltan [], sobran ['estado=4', 'fecha=2016']",
+    "explicacion_juez": "La diferencia entre el resultado obtenido y el de referencia se debe a que la consulta SQL no considera los productos de la marca Trek que no cumplen con los criterios de filtro (`strftime('%Y', order_date) = '2016'` y `strftime('%Y-%m', order_date) IN ...`)."
   },
   {
     "id": "N1",
@@ -1362,7 +1444,8 @@
     "latencia_total_s": 31.0,
     "sql": "WITH p AS (\n    SELECT product_name, brand_name,\n           SUM(net_amount)      AS ingreso_neto,\n           SUM(discount_amount) AS descuento_cedido,\n           SUM(gross_amount)    AS ingreso_bruto\n    FROM v_order_lines\n    WHERE order_status = 4 AND discount > 0\n    GROUP BY product_name\n)\nSELECT * FROM (\n    SELECT 'Top ingreso neto' AS ranking, product_name AS producto, brand_name AS marca,\n           ROUND(ingreso_neto, 2) AS ingreso_neto, ROUND(descuento_cedido, 2) AS descuento_cedido,\n           ROUND(100.0 * descuento_cedido / ingreso_bruto, 2) AS pct_cedido\n    FROM p ORDER BY ingreso_neto DESC LIMIT 10\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Top % cedido' AS ranking, product_name, brand_name,\n           ROUND(ingreso_neto, 2), ROUND(descuento_cedido, 2),\n           ROUND(100.0 * descuento_cedido / ingreso_bruto, 2) AS pct_cedido\n    FROM p ORDER BY pct_cedido DESC, ingreso_neto DESC LIMIT 10\n)",
     "respuesta": "**Análisis de los productos con descuentos**\n\nLos productos con descuentos más altos son:\n\n* Trek Slash 8 27.5 - 2016 (ingreso neto: $544,318.64, descuento cedido: $59,679.85, porcentaje cedido: 9.88%)\n* Trek Conduit+ - 2016 (ingreso neto: $381,148.73, descuento cedido: $44,849.85, porcentaje cedido: 10.53%)\n* Trek Fuel EX 8 29 - 2016 (ingreso neto: $354,813.78, descuento cedido: $45,384.84, porcentaje cedido: 11.34%)\n* Surly Straggler 650b - 2016 (ingreso neto: $220,713.99, descuento cedido: $26,391.54, porcentaje cedido: 10.68%)\n* Trek Remedy 29 Carbon Frameset - 2016 (ingreso neto: $199,996.89, descuento cedido: $21,401",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N2",
@@ -1378,7 +1461,8 @@
     "latencia_total_s": 22.27,
     "sql": "WITH populares AS (\n    SELECT product_name, SUM(quantity) AS unidades_vendidas\n    FROM v_order_lines\n    WHERE order_status = 4\n    GROUP BY product_name\n    ORDER BY unidades_vendidas DESC\n    LIMIT 20\n),\nstock_tienda AS (\n    SELECT p.product_name, st.store_id, SUM(st.quantity) AS stock\n    FROM stocks st JOIN products p ON p.product_id = st.product_id\n    GROUP BY p.product_name, st.store_id\n)\nSELECT pop.product_name AS producto, pop.unidades_vendidas, s.store_name AS tienda,\n       sk.stock\nFROM populares pop\nJOIN stock_tienda sk ON sk.product_name = pop.product_name\nJOIN stores s        ON s.store_id = sk.store_id\nWHERE sk.stock < 5\nORDER BY sk.stock, pop.unidades_vendidas DESC",
     "respuesta": "**Análisis de la situación**\n\nDespués de analizar la información proporcionada, se observa que los siguientes productos están a punto de agotarse en varias tiendas:\n\n- Surly Ice Cream Truck Frameset - 2016 (Santa Cruz Bikes) con 0 unidades disponibles\n- Trek Remedy 29 Carbon Frameset - 2016 (Santa Cruz Bikes) con 0 unidades disponibles\n- Surly Wednesday Frameset - 2016 (Rowlett Bikes) con 0 unidades disponibles\n- Heller Shagamaw Frame - 2016 (Baldwin Bikes) con 1 unidad disponible\n- Trek Remedy 29 Carbon Frameset - 2016 (Baldwin Bikes) con 1 unidad disponible\n- Trek Fuel EX 8 29 - 2016 (Baldwin Bikes) con 2 unidades disponibles\n- Pure Cycles Vine 8-Speed - 2016 (Santa Cruz Bikes) con 2 unidades disponibles\n- Electra Moto 1 - 2016 (Santa Cruz Bikes) con 3 unidades disponibles\n- Heller Shagamaw Frame - 2016 (Rowlett Bikes) con 3 unidades",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N3",
@@ -1394,7 +1478,8 @@
     "latencia_total_s": 7.17,
     "sql": "SELECT staff_name AS vendedor, store_name AS tienda,\n       ROUND(SUM(net_amount), 2)  AS ingreso_neto,\n       SUM(quantity)              AS unidades,\n       COUNT(DISTINCT order_id)   AS ordenes\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC",
     "respuesta": "La respuesta es:\n\n1. Marcelene Boyer\n2. Venita Daniel\n3. Genna Serrano\n4. Mireya Copeland\n5. Kali Vargas\n6. Layla Terrell",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N4",
@@ -1410,7 +1495,8 @@
     "latencia_total_s": 15.09,
     "sql": "WITH minimo AS (SELECT MIN(discount) AS d FROM order_items),\ngeneral AS (\n    SELECT customer_city, customer_state, AVG(discount) AS desc_prom,\n           SUM(net_amount) AS ingreso_total\n    FROM v_order_lines WHERE order_status = 4\n    GROUP BY customer_city, customer_state\n)\nSELECT l.customer_city AS ciudad, l.customer_state AS estado,\n       ROUND(SUM(l.net_amount), 2)  AS ingreso_neto_desc_minimo,\n       ROUND(100.0 * g.desc_prom, 2) AS descuento_promedio_pct,\n       ROUND(100.0 * SUM(l.net_amount) / g.ingreso_total, 2) AS pct_ingreso_desc_minimo\nFROM v_order_lines l\nJOIN general g ON g.customer_city = l.customer_city AND g.customer_state = l.customer_state\nWHERE l.order_status = 4 AND l.discount = (SELECT d FROM minimo)\nGROUP BY l.customer_city, l.customer_state\nORDER BY ingreso_neto_desc_minimo DESC\nLIMIT 10",
     "respuesta": "La respuesta es la siguiente:\n\n* Las compras hechas con el menor descuento se encuentran en las ciudades de Troy y San Angelo, con un descuento promedio del 10.08% y 9.03%, respectivamente.\n* Estas ciudades tienen un ingreso total promedio del 10.08% y 9.03%, respectivamente.\n* El descuento promedio es del 10.08%, lo que indica que el precio de venta es inferior al precio de compra.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N5",
@@ -1426,7 +1512,8 @@
     "latencia_total_s": 9.34,
     "sql": "SELECT * FROM (\n    SELECT store_name AS tienda, COUNT(*) AS ordenes_tarde,\n           ROUND(SUM(net_total), 2) AS monto_neto, ROUND(AVG(days_late), 2) AS dias_retraso_prom\n    FROM v_orders WHERE is_late = 1\n    GROUP BY store_id\n    ORDER BY monto_neto DESC\n)\nUNION ALL\nSELECT 'Total', COUNT(*), ROUND(SUM(net_total), 2), ROUND(AVG(days_late), 2)\nFROM v_orders WHERE is_late = 1",
     "respuesta": "La respuesta es la siguiente:\n\n- Los envíos que llegan tarde en Rowlett Bikes pasan más.\n- Los envíos que llegan tarde en Rowlett Bikes costan $167,692.33.\n- Los envíos que llegan tarde en Rowlett Bikes tienen un monto neto de $2,042,907.07.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N6",
@@ -1442,7 +1529,8 @@
     "latencia_total_s": 29.26,
     "sql": "WITH ref AS (SELECT value AS fecha FROM db_metadata WHERE key = 'last_completed_date'),\nventana AS (\n    SELECT date(fecha, '-6 months', '+1 day') AS desde,\n           fecha AS hasta\n    FROM ref\n),\nvendidos_ventana AS (\n    SELECT DISTINCT product_name FROM v_order_lines, ventana\n    WHERE order_status = 4 AND order_date >= ventana.desde AND order_date <= ventana.hasta\n),\nvendidos_historico AS (\n    SELECT DISTINCT product_name FROM v_order_lines WHERE order_status = 4\n)\nSELECT p.product_name AS producto,\n       CASE WHEN p.product_name IN (SELECT product_name FROM vendidos_historico)\n            THEN 'Sin ventas recientes' ELSE 'Nunca vendido' END AS estado_inventario,\n       SUM(st.quantity) AS unidades_inmovilizadas,\n       MAX(p.list_price) AS precio_lista,\n       ROUND(SUM(st.quantity * p.list_price), 2) AS valor_inmovilizado\nFROM stocks st\nJOIN products p ON p.product_id = st.product_id\nJOIN stores s   ON s.store_id = st.store_id\nWHERE st.quantity > 0\n  AND p.product_name NOT IN (SELECT product_name FROM vendidos_ventana)\nGROUP BY p.product_name\nORDER BY valor_inmovilizado DESC",
     "respuesta": "Entre las mercancías que llevan meses en bodega sin moverse y cuánto capital tenemos ahí parado, se encuentran los siguientes productos:\n\n* Trek Domane SLR 6 Disc Women's - 2018: $241,999.56\n* Trek Domane SL Frameset - 2018: $227,499.65\n* Trek Verve+ - 2018: $181,699.21\n* Trek Domane SLR 6 Disc - 2018: $164,999.70\n* Trek Madone 9 Frameset - 2018: $137,599.57\n* Trek Domane SLR Disc Frameset - 2018: $111,999.65\n* Surly Troll Frameset - 2018: $102,499.59\n* Trek Domane SLR 6 - 2018: $89,999.82\n* Electra Townie Commute 27D - 2018: $67,499.25\n* Surly Krampus Frameset - 2018: $64,999.74\n* Trek Powerfly 5 Women's - 2018: $59,499",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N7",
@@ -1458,7 +1546,8 @@
     "latencia_total_s": 11.74,
     "sql": "SELECT c.first_name || ' ' || c.last_name AS cliente, o.customer_city AS ciudad,\n       COUNT(*) AS ordenes_multimarca, MAX(o.n_brands) AS max_marcas\nFROM v_orders o\nJOIN customers c ON c.customer_id = o.customer_id\nWHERE o.order_status = 4 AND o.n_brands >= 2\nGROUP BY o.customer_id\nORDER BY ordenes_multimarca DESC, max_marcas DESC, cliente",
     "respuesta": "Los clientes que suelen combinar varias marcas en un mismo pedido son:\n\n*   Alesia Horne\n*   Erlinda Humphrey\n*   Ernest Rollins\n*   Pinkie Kirkland\n*   Saturnina Garner\n*   Tenisha Lyons\n*   Abby Gamble\n*   Adelaida Hancock\n*   Alejandrina Hodges\n*   Alexandria Zamora\n*   Alishia Elliott\n*   Allison Nolan\n*   Alpha King\n*   Amina Salazar\n*   Ann Heath",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N8",
@@ -1474,7 +1563,8 @@
     "latencia_total_s": 2.73,
     "sql": "SELECT store_name AS tienda, COUNT(*) AS ordenes,\n       ROUND(AVG(net_total), 2) AS ticket_promedio\nFROM v_orders\nWHERE order_status = 4\nGROUP BY store_id\nORDER BY ticket_promedio DESC",
     "respuesta": "La respuesta es: $4,613.55.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N9",
@@ -1490,7 +1580,8 @@
     "latencia_total_s": 11.01,
     "sql": "SELECT * FROM (\n    SELECT 'Categoría' AS dimension, category_name AS nombre, SUM(quantity) AS unidades,\n           COUNT(DISTINCT strftime('%Y-%m', order_date)) AS meses_con_ventas,\n           ROUND(1.0 * SUM(quantity) / COUNT(DISTINCT strftime('%Y-%m', order_date)), 2) AS rotacion_mensual\n    FROM v_order_lines WHERE order_status = 4\n    GROUP BY category_name\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Marca', brand_name, SUM(quantity),\n           COUNT(DISTINCT strftime('%Y-%m', order_date)),\n           ROUND(1.0 * SUM(quantity) / COUNT(DISTINCT strftime('%Y-%m', order_date)), 2)\n    FROM v_order_lines WHERE order_status = 4\n    GROUP BY brand_name\n)\nORDER BY dimension, rotacion_mensual",
     "respuesta": "La categoría con la salida más lenta del catálogo es:\n\n* Categoría: Children Bicycles\n\nLa marca con la salida más lenta es:\n\n* Marca: Haro\n\nLa rotación mensual de la salida es de $44.67.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N10",
@@ -1506,7 +1597,8 @@
     "latencia_total_s": 7.04,
     "sql": "SELECT * FROM (\n    SELECT 'Total' AS nivel, 'Todas' AS detalle, COUNT(*) AS ordenes,\n           ROUND(SUM(net_total), 2) AS monto_neto_perdido\n    FROM v_orders WHERE order_status = 3\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Tienda', store_name, COUNT(*), ROUND(SUM(net_total), 2)\n    FROM v_orders WHERE order_status = 3\n    GROUP BY store_id ORDER BY 4 DESC\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Mes', strftime('%Y-%m', order_date), COUNT(*), ROUND(SUM(net_total), 2)\n    FROM v_orders WHERE order_status = 3\n    GROUP BY 2 ORDER BY 2\n)",
     "respuesta": "La respuesta es de $1.234.56.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "A1",
@@ -1523,7 +1615,8 @@
     "sql": "SELECT strftime('%Y-%m', order_date) AS mes, COUNT(*) AS ordenes,\n       ROUND(AVG(net_amount), 2) AS ticket_promedio\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\n  AND strftime('%Y', order_date) = '2016'\nGROUP BY mes\nORDER BY ticket_promedio DESC\nLIMIT 500",
     "respuesta": "Ticket promedio por tienda: $4,124.99",
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "forma 11x3 contra referencia 3x2"
+    "fallo_detalle": "forma 11x3 contra referencia 3x2",
+    "explicacion_juez": "La diferencia entre el resultado obtenido y el de referencia se debe a que se está considerando solo las ventas de Electric Bikes, pero no se está considerando las ventas de otras categorías de Bikes."
   },
   {
     "id": "A2",
@@ -1540,7 +1633,8 @@
     "sql": "SELECT AS ingreso_bruto_descuento\nFROM (\n    SELECT product_name, list_price, SUM(CASE WHEN discount > 0 THEN list_price * quantity ELSE 0 END) AS ingreso_bruto_descuento\n    FROM v_order_lines v\n    JOIN products p ON p.product_id = v.product_id\n    WHERE p.brand_name = 'Trek' AND v.order_status = 4\n    GROUP BY product_name, list_price\n) AS subquery\nORDER BY ingreso_bruto_descuento DESC\nLIMIT 10",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "near \"AS\": syntax error"
+    "fallo_detalle": "near \"AS\": syntax error",
+    "explicacion_juez": "La consulta SQL que proporcionaste parece estar diseñada para mostrar los productos de la marca Trek que cuestan más en descuentos. Sin embargo, hay algunas razones por las que el resultado obtenido no coincide con el de referencia: 1. **Falta de filtrado por descuento**: La consulta no incluye un filtro para que solo muestre los productos que tienen un descuento mayor que cero. Esto significa que todos los productos de Trek que tienen un descuento pueden aparecer en el resultado. 2. **Falta de ordenación por descuento**: La consulta"
   },
   {
     "id": "A3",
@@ -1556,7 +1650,8 @@
     "latencia_total_s": 14.2,
     "sql": "SELECT ROUND(SUM(net_amount), 2) AS ingreso_neto,\n       staff_name AS vendedor\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC\nLIMIT 3",
     "respuesta": "Después de analizar los datos, te presento los resultados:\n\n1. $79,671.34 - Genna Serrano\n2. $261,795.84 - Venita Daniel\n3. $271,184.17 - Marcelene Boyer",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "A4",
@@ -1573,7 +1668,8 @@
     "sql": "SELECT * FROM v_orders\nWHERE order_status = 3 AND strftime('%Y', order_date) = '2017'\n  AND strftime('%Y', customer_city) = 'TX'\nLIMIT 500",
     "respuesta": "No se encontraron registros para esa consulta.",
     "fallo_categoria": "filtro_incorrecto",
-    "fallo_detalle": "filtros distintos: faltan [], sobran ['fecha=2017']"
+    "fallo_detalle": "filtros distintos: faltan [], sobran ['fecha=2017']",
+    "explicacion_juez": "La respuesta es que la condición `strftime('%Y', order_date) = '2017'` no es válida para todas las filas de la tabla `v_orders`. La función `strftime` solo puede convertir una fecha en una cadena de 4 dígitos, y en este caso, la fecha `2017` no está en formato de 4 dígitos."
   },
   {
     "id": "B1",
@@ -1590,7 +1686,8 @@
     "sql": "SELECT COUNT(*) AS clientes_nively\nFROM customers\nWHERE state IN ('CA', 'NY', 'TX')\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "filtro_incorrecto",
-    "fallo_detalle": "filtros distintos: faltan [], sobran ['texto=ca', 'texto=tx']"
+    "fallo_detalle": "filtros distintos: faltan [], sobran ['texto=ca', 'texto=tx']",
+    "explicacion_juez": "La discrepancia entre los resultados de la query SQL y la referencia está en que la query está filtrando por state, pero no está filtrando por CA, NY y TX. La query está incluyendo todos los clientes, mientras que la referencia tiene \"clientes\" como la nombre de la columna. Por lo tanto, el COUNT(*) en la query es counts de todos los clientes, incluyendo los que no pertenecen a NY, lo que explica por qué el resultado es 1,445 en lugar de 1,019."
   },
   {
     "id": "B2",
@@ -1607,7 +1704,8 @@
     "sql": null,
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "Pregunta: ¿Cuál fue el ingreso neto total de las ventas en 2017? SQL generada: (ninguna) Resultado obtenido: (la consulta no se ejecutó) Resultado de referencia: | ingreso_neto | |---| | $3,346,972.65 | (1 filas en total) ¿Por qué no coinciden?"
   },
   {
     "id": "B3",
@@ -1624,7 +1722,8 @@
     "sql": "SELECT p.product_name AS producto, SUM(p.quantity) AS unidades FROM products p\nJOIN v_order_lines o ON p.product_id = o.product_id\nJOIN v_orders o2 ON o2.order_id = o2.order_line_id\nGROUP BY p.product_name\nORDER BY p.product_name, SUM(p.quantity) DESC\nLIMIT 5",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: p.quantity"
+    "fallo_detalle": "no such column: p.quantity",
+    "explicacion_juez": "La consulta SQL incluye más información que la referencia de resultados. La consulta incluye un-filter de producto y un-filter de unidades, y también incluye la media y el número total de unidades vendidas. Por ejemplo, la consulta da la siguiente información: | producto | unidades vendidas | número total de unidades | media de unidades | |-------------------|--------------------|-----------------------------|---------------------| | Electra Cruiser 1 (24-Inch) - 2016 | 290 | 290 | 290 | | Surly Ice Cream Truck Frameset - 2016 | 162 | 162 | 162 | La referencia solo muestra los 5 productos más altos de unidades vendidas, pero la consulta también incluye la media y el número total de unidades vendidas. Por lo tanto, los resultados de la consulta no coinciden con los de la referencia por reasones de la información incluente."
   },
   {
     "id": "B4",
@@ -1641,7 +1740,8 @@
     "sql": "SELECT \n    COUNT(*) AS ordenes\nFROM \n    v_order_lines\nGROUP BY \n    order_status\nORDER BY \norder_status\nLIMIT 500",
     "respuesta": null,
     "fallo_categoria": "otro",
-    "fallo_detalle": "fila de referencia 1 no encontrada: [62.0]"
+    "fallo_detalle": "fila de referencia 1 no encontrada: [62.0]",
+    "explicacion_juez": "La discrepancia entre los resultados de la query SQL y la de referencia es probablemente debido a la estructura de la table v_order_lines. La table no está definida de manera clara, lo que puede incluir todas las órdenes, o solo las primeras 500. Además, la table podría tener estatus como una columna de type datetime, lo que significa que las órdenes no se han separado de manera clara por estatus. Por lo tanto, la COUNT(*) no está separada de manera clara por el estatus, lo que puede incluir todas las órdenes o solo las que se han transferido correctamente."
   },
   {
     "id": "B5",
@@ -1658,7 +1758,8 @@
     "sql": "SELECT s",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: s"
+    "fallo_detalle": "no such column: s",
+    "explicacion_juez": "La discrepancia entre la consulta SQL y la refleja de la referencia podría ser explained por errores de guardado, filtrado, aggregateo o recopilación en la base Bike Stores. Por ejemplo, la \"Baldwin Bikes\" tienda podría estar guardada correctamente, pero la refleja de la referencia podría tener errores, o la consulta SQL podría haber filtrado out la datos de la \"Baldwin Bikes\" tienda. Además, las columnas o filosbowos de la refleja de la referencia podría estar confundidos con las de la base Bike Stores."
   },
   {
     "id": "B6",
@@ -1675,7 +1776,8 @@
     "sql": null,
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "Pregunta: Muestra el ingreso neto de las ventas por categoría, de mayor a menor. Resultados: - Resultado de la consulta generada: (ninguna) - Resultado de referencia: | categoria | ingreso_neto | |---|---| | Mountain Bikes | $2,486,420.26 | | Road Bikes | $1,327,155.64 | | Cruisers Bicycles | $866,524.40 | | Electric Bikes | $733,493.75 | | Cyclocross Bicycles | $642,584.83 | | Comfort Bicycles | $346,450.00 | | Children Bicycles | $259,986.37 | ¿Por qué no coinciden?"
   },
   {
     "id": "B7",
@@ -1692,7 +1794,8 @@
     "sql": "SELECT s.store_name, SUM(p.quantity) AS unidades\nFROM v_orders o\nJOIN v_order_lines o_order ON o.item_id = o_order.item_id\nJOIN products p ON p.product_id",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: s.store_name"
+    "fallo_detalle": "no such column: s.store_name",
+    "explicacion_juez": "La discrepancia entre la consulta SQL y la reflejación de la información de las tiendas debe a que la suma total de las unidades en todo el sistema no está en la reflejación de las tiendas. La reflejación de las tiendas solo muestra las sumas por cada una, por lo que cuando he pedido la suma total de las unidades, no he obtenido la información necesaria para determinar cuántas unidades hay en cada tienda."
   },
   {
     "id": "B8",
@@ -1709,7 +1812,8 @@
     "sql": "SELECT COUNT(*) AS ordenes_completados\nFROM v_orders\nWHERE order_status = 4 AND year = 2016\nGROUP BY ordenes_completados\nORDER BY ordenes_completados DESC",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: year"
+    "fallo_detalle": "no such column: year",
+    "explicacion_juez": "La discrepancia entre la consulta y la respuesta de referencia podría ser debajo de las especificaciones de la base de datos Bike Stores. La consulta incluye un `GROUP BY` que produce una respuesta que solo muestra la cantidad de órdenes completadas, sin las filas que han generado la consulta. Además, la tabla `v_orders` podría tener datos nulos o se wantiten de manera diferente que no se expectan."
   },
   {
     "id": "B9",
@@ -1726,7 +1830,8 @@
     "sql": "SELECT \n    strftime('%Y-%m', order_date) AS mes, \n    SUM(net_total) AS ingreso_neto\nFROM v_orders \nWHERE order_status = 4 \nAND strftime('%Y', order_date) = '2017'\nGROUP BY mes\nORDER BY ingreso_neto DESC\nLIMIT 1",
     "respuesta": null,
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "forma 1x2 contra referencia 12x1"
+    "fallo_detalle": "forma 1x2 contra referencia 12x1",
+    "explicacion_juez": "Puedes verificar si solo se filtran por el ingreso neto y el mes de 2017, o si hay más filtros que necesitan aplicarse. Además, debo asegurarme de que la consulta sea correcta y que solo se filtran por el ingreso neto y el mes de 2017, lo que haría de obtener todos los datos de las ventas de 2017 por meses."
   },
   {
     "id": "B10",
@@ -1743,7 +1848,8 @@
     "sql": "SELECT SUM(list_price) / COUNT(1) AS avg_list_price\nFROM products\nWHERE brand_name = 'Trek'",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: brand_name"
+    "fallo_detalle": "no such column: brand_name",
+    "explicacion_juez": "La consulta no se ejecutó porque la fórmula SUM(list_price) / COUNT(1) no es correcta para calcular el precio promedio. La fórmula correcta es SUM(list_price) / COUNT(*) o SUM(list_price) / COUNT(1) dependiendo de cómo se wanteze. En este caso, COUNT(*) es más apropiado para calcular el precio promedio de todos los productos de la marca Trek. ¿Por qué no coinciden?"
   },
   {
     "id": "N1",
@@ -1760,7 +1866,8 @@
     "sql": "SELECT SUM(gross_amount - discount_amount) AS net_amount\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY product_id\nROUND(?, 2)",
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "SQL con errores de sintaxis: Invalid expression / Unexpected token. Line 5, Col: 5."
+    "fallo_detalle": "SQL con errores de sintaxis: Invalid expression / Unexpected token. Line 5, Col: 5.",
+    "explicacion_juez": "(sin explicación)"
   },
   {
     "id": "N2",
@@ -1777,7 +1884,8 @@
     "sql": "SELECT p.product_name AS producto, SUM(q.quantity) AS unidades FROM (\n    SELECT p.product_id, SUM(q.quantity) AS quantity FROM v_order_lines v ORDER WHERE v.status_label = 4 AND p.category_name IN (SELECT category_name FROM categories) \n    GROUP BY p.product_id\n    ORDER BY SUM(q.quantity) DESC\n) AS v_order_lines_sold\nJOIN products p ON p.product_id = v_order_lines_sold.product_id\nWHERE p.category_name IN (SELECT category_name FROM categories)\nAND v_order_lines_sold.quantity < v.stocks.quantity\nGROUP BY p.product_name",
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "SQL con errores de sintaxis: Expecting ). Line 2, Col: 79."
+    "fallo_detalle": "SQL con errores de sintaxis: Expecting ). Line 2, Col: 79.",
+    "explicacion_juez": "La consulta no coincide con la referencia porque la base Bike Stores incluye diferentes datos, como la cantidad de stock y la cantidad vendida, que no están filtradas correctamente. La consulta está filtrando por tiendas con stock cero y productos en categorías específicas, mientras la referencia está filtrando por tiendas con stock cero y productos en categorías generales. Esto puede explainar las discrepancias en la cantidad de stock y la cantidad vendida."
   },
   {
     "id": "N3",
@@ -1794,7 +1902,8 @@
     "sql": null,
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "No hay datos en la base de datos para filtrar por \"vendedor\" o para buscar la información de intereses específicos. Por lo tanto, las ventas no coinciden porque la consulta SQL no se ejecutó correctamente."
   },
   {
     "id": "N4",
@@ -1811,7 +1920,8 @@
     "sql": null,
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "La consulta SQL no se ejecutó correctamente, por lo que no se obtuvo el resultado deseado. La reason por qué no coinciden es que la consulta SQL no se ejecutó correctamente."
   },
   {
     "id": "N5",
@@ -1828,7 +1938,8 @@
     "sql": null,
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "**Por qué no coinciden los resultados de la consulta SQL con el de referencia:** La consulta SQL no se ejecutó correctamente, lo que puede ser por varias razones. A continuación, detallamos los problemas que podrían ser por causas: 1. **Falta de datos:** - La consulta SQL podría estar trabajando solo con una parte de la tabla de la base Bike Stores, sin incluir todas las columnas necesarias. - Por ejemplo, si solo se procesaba la tabla de las tiendas, podría estar manejando solo las tiendas y no las orderes o los monto neto. 2. **Uso incorrecto de filtros:** - Los filtros de la consulta SQL podría estar filtrando solo las tiendas o solo las orderes, sin incluir todas las columnas necesarias. - Por ejemplo, si solo se filtraba por las tiendas, podría estar manejando solo las tiendas y no las orderes o los monto neto. 3. **Uso incorrecto de agregación:** - La aggregate de la consulta SQL podría estar sumando solo las tiendas o solo las orderes, sin incluir todas las columnas necesarias. - Por ejemplo, si solo se aggregate por las tiendas, podría estar manejando solo las tiendas y no las orderes o los monto neto. 4. **Falta de filtrado:** - La filtración de la consulta SQL podría estar filtrando solo las tiendas o solo las orderes, sin incluir todas las columnas necesarias. - Por ejemplo, si solo se filtraba por las tiendas, podría estar manejando solo las tiendas y no las orderes o los monto neto. 5. **Opcional de columns:** - La consulta SQL podría estar manejando solo las columnsas específicas, como las tiendas, sin incluir todas las columnas necesarias. - Por ejemplo, si solo se procesaba la tabla de las tiendas, podría estar manejando solo las tiendas y no las orderes o los monto neto. 6. **Opcional de top-N:** - La aggregate de la consulta SQL podría estar manejando solo las filas específicas, como las tiendas, sin incluir todas las filas necesarias. - Por ejemplo, si solo se aggregate por las tiendas, podría estar manejando solo las tiendas y no las orderes o los monto neto. **Ejemplo concreto:** Supongamos que la consulta SQL se está realizando con la siguiente estructura: ```sql SELECT * FROM tienda ``` Si la base Bike Stores tiene una tabla de tiendas con solo las tiendas como columnsas, la consulta SQL podría estar manejando solo las tiendas y no las orderes o los monto neto. **Solución:** Para resolver este problema, la aggregate de la consulta SQL debe ser modificada para incluir todas las columnas necesarias, como las tiendas, las orderes y el monto neto. **Ejemplo de estructura correcta:** ```sql SELECT tienda, orderes_tarde, monto_neto FROM tienda GROUP BY tienda ``` Esta estructura incluye todas las columnas necesarias y se puede aplicar a la base Bike Stores para obtener los resultados correctos. **Conclusión:** La consulta SQL no se ejecutó correctamente, lo que puede ser por varias razones, como faltas de datos, uso incorrecto de filtros, uso incorrecto de agregación, falta de filtrado, o opciones de columns y top-N. Para resolver este problema, la aggregate de la consulta SQL debe ser modificada para incluir todas las columnas necesarias y aplicarse a la base Bike Stores para obtener los resultados correctos."
   },
   {
     "id": "N6",
@@ -1845,7 +1956,8 @@
     "sql": "SELECT \n    brand_name AS brand, \n    ROUND(SUM(net_amount), 2) AS ingreso_neto\nFROM \n    v_orders \nWHERE \n    order_status = 4 \nGROUP BY \n    brand_name \nORDER BY \n    ingreso_neto DESC",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: brand_name"
+    "fallo_detalle": "no such column: brand_name",
+    "explicacion_juez": "La discrepancia entre la consulta SQL y la references de la base Bike Stores está en las lackadas de las tables directly related y related. La references incluye tables como productos, pero no hay una related directamente a Mercancía en bodega. Además, la references incluye información sobre productos, lo que podría ser una tabla que no está relacionada con Mercancía en bodega."
   },
   {
     "id": "N7",
@@ -1862,7 +1974,8 @@
     "sql": null,
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "La consulta SQL no se ejecutó probablemente porque no se aplicaron los filtros correctos o la estructura de las tables no esté correctamente definida. Además, el usuario podría estar faltando some de los filtros o aplicando incorrectos, lo que no esté en el resultado final."
   },
   {
     "id": "N8",
@@ -1879,7 +1992,8 @@
     "sql": null,
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "La consulta SQL no se ejecuteó, lo que podría explained por varios problemas, como errores de configuración, problemas de connectividad, o problemas de indexes. Sin embargo, la information de la references incluye la information de promedio por tienda y ordenes, lo que podría estar correctamente configurada. Por lo tanto, la reason no coinciden es que la base de datos no está correctamente configurada o las tables no están correctamente correlated con las tables de la base de datos."
   },
   {
     "id": "N9",
@@ -1896,7 +2010,8 @@
     "sql": "SELECT \n    c.category_name",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: c.category_name"
+    "fallo_detalle": "no such column: c.category_name",
+    "explicacion_juez": "(sin explicación)"
   },
   {
     "id": "N10",
@@ -1913,7 +2028,8 @@
     "sql": null,
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "**Respuesta:** La base de datos muestra que hay un monto neto perdiendo de \\$208,579.45 por las pedidos que al final no se concretaron. La tabla below refleja los datos necesarios para responder la pregunta: | nivel | Detalles | ordenes | Monto neto perdiendo | |---|---|---|---| | Total | 29 | 29 | $208,579.45 | La tabla muestra que el monto neto perdiendo total es de \\$208,579.45, lo que refleja la cantidad de dinero perdimos por los pedidos que al final no se concretaron."
   },
   {
     "id": "A1",
@@ -1930,7 +2046,8 @@
     "sql": "SELECT \n    (Avg(CASE WHEN is_shipped = 1 THEN (Net /",
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "SQL con errores de sintaxis: Required keyword: 'expression' missing for <class 'sqlglot.expressions.core.Div'>. Line 2, Col: 45."
+    "fallo_detalle": "SQL con errores de sintaxis: Required keyword: 'expression' missing for <class 'sqlglot.expressions.core.Div'>. Line 2, Col: 45.",
+    "explicacion_juez": "La consulta de SQL no coincide con la referencia porque: 1. **Filtros Necarios**: No se han filtrado las tiendas que se han vendido de Electric Bikes. La condición `is_shipped = 1` no está correctamente filtrada. 2. **Numeratoro Incomplete**: La media está basada en \"Net /\", pero en la referencia, no hay que dividiérsel. La media no está correctamente calculada. La respuesta correcta sería: **La consulta no coincide con la referencia porque no se han filtrado correctamente las tiendas que se han vendido de Electric Bikes y la media está basada en \"Net /\", que no está correctamente calculada.**"
   },
   {
     "id": "A2",
@@ -1947,7 +2064,8 @@
     "sql": null,
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "Puedes verificar por qué no coinciden los resultados revisando los siguientes aspectos: 1. **Consulta de SQL**: No he ejecutado la consulta SQL correctamente. Por ejemplo, quizás haya sido un error de sintaxis o la falta de parámetros. 2. **Resultados de referencia**: La lista de productos de Trek incluye información de productos específicos, pero no de los descuentos cedido. 3. **Filtros, aggregateaciones o solo las partes específicas**: El usuario podría requerir una filtración, aggregateación o solo la parte superior o la parte inferior de la lista de productos de referencia. 4. **Top-N**: Si el usuario quiere solo las 10 productos más vendidos o más altos de descuentos, podría ser la reason. En todo caso, es importante verificar que la consulta SQL y la lista de productos de referencia sean correctas y aplicadas correctamente."
   },
   {
     "id": "A3",
@@ -1964,7 +2082,8 @@
     "sql": "SELECT store_name, ROUND(SUM(net_total), 2) AS ingreso_neto, net_total\nFROM orders\nGROUP BY store_name",
     "respuesta": null,
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: store_name"
+    "fallo_detalle": "no such column: store_name",
+    "explicacion_juez": "La discrepancia entre la consulta SQL y la respuesta de referencia está becauseando la filtración de la consulta por `store_name`, lo que incluye todos los vendedores, mientras que la respuesta de referencia está filtrada por `vendedor`, lo que incluye solo los 3 más altos de ingreso neto."
   },
   {
     "id": "A4",
@@ -1981,7 +2100,8 @@
     "sql": null,
     "respuesta": null,
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "La discrepancia entre el resultado de la consulta NO y el resultado de referencia es probablemente debido a que la consulta NO no incluyó las funciones necesarias para obtener la información de monto_neto_perdido de órdenes rechazadas de clientes de Texas. La sección de la base de datos de la sección de órdenes rechazadas de Texas debería tener las funciones de filtrado, limpiada, aggregateación, joins y las secciones de la base de datos para obtener el resultado correcto."
   },
   {
     "id": "B1",
@@ -1997,7 +2117,8 @@
     "latencia_total_s": 22.2,
     "sql": "SELECT COUNT(*) AS clientes\nFROM customers\nWHERE state = 'NY'\nLIMIT 500",
     "respuesta": "El resultado (clientes) es 1,019.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "B2",
@@ -2014,7 +2135,8 @@
     "sql": null,
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "Pregunta: ¿Cuál fue el ingreso neto total de las ventas en 2017? SQL generada: (ninguna) Resultado obtenido: (la consulta no se ejecutó) Resultado de referencia: | ingreso_neto | |---| | $3,346,972.65 | (1 filas en total) ¿Por qué no coinciden?"
   },
   {
     "id": "B3",
@@ -2031,7 +2153,8 @@
     "sql": "SELECT p.product_name AS producto, SUM(p.quantity) AS unidades FROM products p\nJOIN v_order_lines o ON p.product_id = o.product_id\nJOIN v_orders o2 ON o2.order_id = o2.order_line_id\nGROUP BY p.product_name\nORDER BY p.product_name, SUM(p.quantity) DESC\nLIMIT 5",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: p.quantity"
+    "fallo_detalle": "no such column: p.quantity",
+    "explicacion_juez": "La consulta SQL incluye más información que la referencia de resultados. La consulta incluye un-filter de producto y un-filter de unidades, y también incluye la media y el número total de unidades vendidas. Por ejemplo, la consulta da la siguiente información: | producto | unidades vendidas | número total de unidades | media de unidades | |-------------------|--------------------|-----------------------------|---------------------| | Electra Cruiser 1 (24-Inch) - 2016 | 290 | 290 | 290 | | Surly Ice Cream Truck Frameset - 2016 | 162 | 162 | 162 | La referencia solo muestra los 5 productos más altos de unidades vendidas, pero la consulta también incluye la media y el número total de unidades vendidas. Por lo tanto, los resultados de la consulta no coinciden con los de la referencia por reasones de la información incluente."
   },
   {
     "id": "B4",
@@ -2048,7 +2171,8 @@
     "sql": "SELECT \n    COUNT(*) AS ordenes\nFROM \n    v_order_lines\nGROUP BY \n    order_status\nORDER BY \norder_status\nLIMIT 500",
     "respuesta": "La consulta devolvió 4 fila(s). Revisa la tabla de resultados para ver el detalle.",
     "fallo_categoria": "otro",
-    "fallo_detalle": "fila de referencia 1 no encontrada: [62.0]"
+    "fallo_detalle": "fila de referencia 1 no encontrada: [62.0]",
+    "explicacion_juez": "La discrepancia entre los resultados de la query SQL y la de referencia es probablemente debido a la estructura de la table v_order_lines. La table no está definida de manera clara, lo que puede incluir todas las órdenes, o solo las primeras 500. Además, la table podría tener estatus como una columna de type datetime, lo que significa que las órdenes no se han separado de manera clara por estatus. Por lo tanto, la COUNT(*) no está separada de manera clara por el estatus, lo que puede incluir todas las órdenes o solo las que se han transferido correctamente."
   },
   {
     "id": "B5",
@@ -2065,7 +2189,8 @@
     "sql": "SELECT s",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: s"
+    "fallo_detalle": "no such column: s",
+    "explicacion_juez": "La discrepancia entre la consulta SQL y la refleja de la referencia podría ser explained por errores de guardado, filtrado, aggregateo o recopilación en la base Bike Stores. Por ejemplo, la \"Baldwin Bikes\" tienda podría estar guardada correctamente, pero la refleja de la referencia podría tener errores, o la consulta SQL podría haber filtrado out la datos de la \"Baldwin Bikes\" tienda. Además, las columnas o filosbowos de la refleja de la referencia podría estar confundidos con las de la base Bike Stores."
   },
   {
     "id": "B6",
@@ -2082,7 +2207,8 @@
     "sql": null,
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "Pregunta: Muestra el ingreso neto de las ventas por categoría, de mayor a menor. Resultados: - Resultado de la consulta generada: (ninguna) - Resultado de referencia: | categoria | ingreso_neto | |---|---| | Mountain Bikes | $2,486,420.26 | | Road Bikes | $1,327,155.64 | | Cruisers Bicycles | $866,524.40 | | Electric Bikes | $733,493.75 | | Cyclocross Bicycles | $642,584.83 | | Comfort Bicycles | $346,450.00 | | Children Bicycles | $259,986.37 | ¿Por qué no coinciden?"
   },
   {
     "id": "B7",
@@ -2099,7 +2225,8 @@
     "sql": "SELECT s.store_name, SUM(p.quantity) AS unidades\nFROM v_orders o\nJOIN v_order_lines o_order ON o.item_id = o_order.item_id\nJOIN products p ON p.product_id",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: s.store_name"
+    "fallo_detalle": "no such column: s.store_name",
+    "explicacion_juez": "La discrepancia entre la consulta SQL y la reflejación de la información de las tiendas debe a que la suma total de las unidades en todo el sistema no está en la reflejación de las tiendas. La reflejación de las tiendas solo muestra las sumas por cada una, por lo que cuando he pedido la suma total de las unidades, no he obtenido la información necesaria para determinar cuántas unidades hay en cada tienda."
   },
   {
     "id": "B8",
@@ -2116,7 +2243,8 @@
     "sql": "SELECT COUNT(*) AS ordenes_completados\nFROM v_orders\nWHERE order_status = 4 AND year = 2016\nGROUP BY ordenes_completados\nORDER BY ordenes_completados DESC",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: year"
+    "fallo_detalle": "no such column: year",
+    "explicacion_juez": "La discrepancia entre la consulta y la respuesta de referencia podría ser debajo de las especificaciones de la base de datos Bike Stores. La consulta incluye un `GROUP BY` que produce una respuesta que solo muestra la cantidad de órdenes completadas, sin las filas que han generado la consulta. Además, la tabla `v_orders` podría tener datos nulos o se wantiten de manera diferente que no se expectan."
   },
   {
     "id": "B9",
@@ -2133,7 +2261,8 @@
     "sql": "SELECT \n    strftime('%Y-%m', order_date) AS mes, \n    SUM(net_total) AS ingreso_neto\nFROM v_orders \nWHERE order_status = 4 \nAND strftime('%Y', order_date) = '2017'\nGROUP BY mes\nORDER BY ingreso_neto DESC\nLIMIT 1",
     "respuesta": "La consulta devolvió 1 fila(s). Revisa la tabla de resultados para ver el detalle.",
     "fallo_categoria": "agregacion_incorrecta",
-    "fallo_detalle": "forma 1x2 contra referencia 12x1"
+    "fallo_detalle": "forma 1x2 contra referencia 12x1",
+    "explicacion_juez": "Puedes verificar si solo se filtran por el ingreso neto y el mes de 2017, o si hay más filtros que necesitan aplicarse. Además, debo asegurarme de que la consulta sea correcta y que solo se filtran por el ingreso neto y el mes de 2017, lo que haría de obtener todos los datos de las ventas de 2017 por meses."
   },
   {
     "id": "B10",
@@ -2150,7 +2279,8 @@
     "sql": "SELECT SUM(list_price) / COUNT(1) AS avg_list_price\nFROM products\nWHERE brand_name = 'Trek'",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "tabla_columna_inexistente",
-    "fallo_detalle": "no such column: brand_name"
+    "fallo_detalle": "no such column: brand_name",
+    "explicacion_juez": "La consulta no se ejecutó porque la fórmula SUM(list_price) / COUNT(1) no es correcta para calcular el precio promedio. La fórmula correcta es SUM(list_price) / COUNT(*) o SUM(list_price) / COUNT(1) dependiendo de cómo se wanteze. En este caso, COUNT(*) es más apropiado para calcular el precio promedio de todos los productos de la marca Trek. ¿Por qué no coinciden?"
   },
   {
     "id": "N1",
@@ -2166,7 +2296,8 @@
     "latencia_total_s": 24.36,
     "sql": "WITH p AS (\n    SELECT product_name, brand_name,\n           SUM(net_amount)      AS ingreso_neto,\n           SUM(discount_amount) AS descuento_cedido,\n           SUM(gross_amount)    AS ingreso_bruto\n    FROM v_order_lines\n    WHERE order_status = 4 AND discount > 0\n    GROUP BY product_name\n)\nSELECT * FROM (\n    SELECT 'Top ingreso neto' AS ranking, product_name AS producto, brand_name AS marca,\n           ROUND(ingreso_neto, 2) AS ingreso_neto, ROUND(descuento_cedido, 2) AS descuento_cedido,\n           ROUND(100.0 * descuento_cedido / ingreso_bruto, 2) AS pct_cedido\n    FROM p ORDER BY ingreso_neto DESC LIMIT 10\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Top % cedido' AS ranking, product_name, brand_name,\n           ROUND(ingreso_neto, 2), ROUND(descuento_cedido, 2),\n           ROUND(100.0 * descuento_cedido / ingreso_bruto, 2) AS pct_cedido\n    FROM p ORDER BY pct_cedido DESC, ingreso_neto DESC LIMIT 10\n)",
     "respuesta": "Trek Slash 8 27.5 - 2016 lidera el ingreso con descuento ($544,318.64); los 10 productos de mayor ingreso cedieron $289,142.15 en descuentos y el mayor % cedido llega a 20.0%.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N2",
@@ -2182,7 +2313,8 @@
     "latencia_total_s": 16.25,
     "sql": "WITH populares AS (\n    SELECT product_name, SUM(quantity) AS unidades_vendidas\n    FROM v_order_lines\n    WHERE order_status = 4\n    GROUP BY product_name\n    ORDER BY unidades_vendidas DESC\n    LIMIT 20\n),\nstock_tienda AS (\n    SELECT p.product_name, st.store_id, SUM(st.quantity) AS stock\n    FROM stocks st JOIN products p ON p.product_id = st.product_id\n    GROUP BY p.product_name, st.store_id\n)\nSELECT pop.product_name AS producto, pop.unidades_vendidas, s.store_name AS tienda,\n       sk.stock\nFROM populares pop\nJOIN stock_tienda sk ON sk.product_name = pop.product_name\nJOIN stores s        ON s.store_id = sk.store_id\nWHERE sk.stock < 5\nORDER BY sk.stock, pop.unidades_vendidas DESC",
     "respuesta": "7 productos top están bajo 5 unidades en alguna tienda (10 casos); 3 ya en cero.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N3",
@@ -2198,7 +2330,8 @@
     "latencia_total_s": 15.4,
     "sql": "SELECT staff_name AS vendedor, store_name AS tienda,\n       ROUND(SUM(net_amount), 2)  AS ingreso_neto,\n       SUM(quantity)              AS unidades,\n       COUNT(DISTINCT order_id)   AS ordenes\nFROM v_order_lines\nWHERE order_status = 4 AND category_name = 'Electric Bikes'\nGROUP BY staff_id\nORDER BY ingreso_neto DESC",
     "respuesta": "Marcelene Boyer (Baldwin Bikes) lidera Electric Bikes con $271,184.17, el 37% del ingreso de la categoría.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N4",
@@ -2214,7 +2347,8 @@
     "latencia_total_s": 17.55,
     "sql": "WITH minimo AS (SELECT MIN(discount) AS d FROM order_items),\ngeneral AS (\n    SELECT customer_city, customer_state, AVG(discount) AS desc_prom,\n           SUM(net_amount) AS ingreso_total\n    FROM v_order_lines WHERE order_status = 4\n    GROUP BY customer_city, customer_state\n)\nSELECT l.customer_city AS ciudad, l.customer_state AS estado,\n       ROUND(SUM(l.net_amount), 2)  AS ingreso_neto_desc_minimo,\n       ROUND(100.0 * g.desc_prom, 2) AS descuento_promedio_pct,\n       ROUND(100.0 * SUM(l.net_amount) / g.ingreso_total, 2) AS pct_ingreso_desc_minimo\nFROM v_order_lines l\nJOIN general g ON g.customer_city = l.customer_city AND g.customer_state = l.customer_state\nWHERE l.order_status = 4 AND l.discount = (SELECT d FROM minimo)\nGROUP BY l.customer_city, l.customer_state\nORDER BY ingreso_neto_desc_minimo DESC\nLIMIT 10",
     "respuesta": "Newburgh, NY tiene la mayor proporción de ingreso con descuento mínimo (51.0%); Floral Park lidera en monto ($30,858.72). 9 de las 10 ciudades están en NY.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N5",
@@ -2230,7 +2364,8 @@
     "latencia_total_s": 13.25,
     "sql": "SELECT * FROM (\n    SELECT store_name AS tienda, COUNT(*) AS ordenes_tarde,\n           ROUND(SUM(net_total), 2) AS monto_neto, ROUND(AVG(days_late), 2) AS dias_retraso_prom\n    FROM v_orders WHERE is_late = 1\n    GROUP BY store_id\n    ORDER BY monto_neto DESC\n)\nUNION ALL\nSELECT 'Total', COUNT(*), ROUND(SUM(net_total), 2), ROUND(AVG(days_late), 2)\nFROM v_orders WHERE is_late = 1",
     "respuesta": "Para determinar cuánto nos están costando los envíos que llegan tarde y en qué tiendas pasa más, analizamos los datos proporcionados:\n\n- **Baldwin Bikes",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N6",
@@ -2246,7 +2381,8 @@
     "latencia_total_s": 23.16,
     "sql": "WITH ref AS (SELECT value AS fecha FROM db_metadata WHERE key = 'last_completed_date'),\nventana AS (\n    SELECT date(fecha, '-6 months', '+1 day') AS desde,\n           fecha AS hasta\n    FROM ref\n),\nvendidos_ventana AS (\n    SELECT DISTINCT product_name FROM v_order_lines, ventana\n    WHERE order_status = 4 AND order_date >= ventana.desde AND order_date <= ventana.hasta\n),\nvendidos_historico AS (\n    SELECT DISTINCT product_name FROM v_order_lines WHERE order_status = 4\n)\nSELECT p.product_name AS producto,\n       CASE WHEN p.product_name IN (SELECT product_name FROM vendidos_historico)\n            THEN 'Sin ventas recientes' ELSE 'Nunca vendido' END AS estado_inventario,\n       SUM(st.quantity) AS unidades_inmovilizadas,\n       MAX(p.list_price) AS precio_lista,\n       ROUND(SUM(st.quantity * p.list_price), 2) AS valor_inmovilizado\nFROM stocks st\nJOIN products p ON p.product_id = st.product_id\nJOIN stores s   ON s.store_id = st.store_id\nWHERE st.quantity > 0\n  AND p.product_name NOT IN (SELECT product_name FROM vendidos_ventana)\nGROUP BY p.product_name\nORDER BY valor_inmovilizado DESC",
     "respuesta": "Pregunta: ¿Qué mercancía lleva meses en bodega sin moverse y cuánto capital tenemos ahí parado?",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N7",
@@ -2262,7 +2398,8 @@
     "latencia_total_s": 13.81,
     "sql": "SELECT c.first_name || ' ' || c.last_name AS cliente, o.customer_city AS ciudad,\n       COUNT(*) AS ordenes_multimarca, MAX(o.n_brands) AS max_marcas\nFROM v_orders o\nJOIN customers c ON c.customer_id = o.customer_id\nWHERE o.order_status = 4 AND o.n_brands >= 2\nGROUP BY o.customer_id\nORDER BY ordenes_multimarca DESC, max_marcas DESC, cliente",
     "respuesta": "500 clientes combinaron 2 o más marcas en una orden; 6 llegaron a 5 marcas.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N8",
@@ -2278,7 +2415,8 @@
     "latencia_total_s": 11.79,
     "sql": "SELECT store_name AS tienda, COUNT(*) AS ordenes,\n       ROUND(AVG(net_total), 2) AS ticket_promedio\nFROM v_orders\nWHERE order_status = 4\nGROUP BY store_id\nORDER BY ticket_promedio DESC",
     "respuesta": "Rowlett Bikes tiene el ticket promedio más alto ($4,971.23) frente a $4,420.75 de Santa Cruz Bikes.",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N9",
@@ -2294,7 +2432,8 @@
     "latencia_total_s": 16.95,
     "sql": "SELECT * FROM (\n    SELECT 'Categoría' AS dimension, category_name AS nombre, SUM(quantity) AS unidades,\n           COUNT(DISTINCT strftime('%Y-%m', order_date)) AS meses_con_ventas,\n           ROUND(1.0 * SUM(quantity) / COUNT(DISTINCT strftime('%Y-%m', order_date)), 2) AS rotacion_mensual\n    FROM v_order_lines WHERE order_status = 4\n    GROUP BY category_name\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Marca', brand_name, SUM(quantity),\n           COUNT(DISTINCT strftime('%Y-%m', order_date)),\n           ROUND(1.0 * SUM(quantity) / COUNT(DISTINCT strftime('%Y-%m', order_date)), 2)\n    FROM v_order_lines WHERE order_status = 4\n    GROUP BY brand_name\n)\nORDER BY dimension, rotacion_mensual",
     "respuesta": "La salida más lenta del catálogo de las bicicletas en la cadena de tiendas se refiere a las marcas y categorías que presentan una",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "N10",
@@ -2310,7 +2449,8 @@
     "latencia_total_s": 16.22,
     "sql": "SELECT * FROM (\n    SELECT 'Total' AS nivel, 'Todas' AS detalle, COUNT(*) AS ordenes,\n           ROUND(SUM(net_total), 2) AS monto_neto_perdido\n    FROM v_orders WHERE order_status = 3\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Tienda', store_name, COUNT(*), ROUND(SUM(net_total), 2)\n    FROM v_orders WHERE order_status = 3\n    GROUP BY store_id ORDER BY 4 DESC\n)\nUNION ALL\nSELECT * FROM (\n    SELECT 'Mes', strftime('%Y-%m', order_date), COUNT(*), ROUND(SUM(net_total), 2)\n    FROM v_orders WHERE order_status = 3\n    GROUP BY 2 ORDER BY 2\n)",
     "respuesta": "45 órdenes rechazadas representan $208,579.45 perdidos; Rowlett Bikes acumula el mayor monto ($86,018.94).",
-    "fallo_categoria": null
+    "fallo_categoria": null,
+    "explicacion_juez": null
   },
   {
     "id": "A1",
@@ -2327,7 +2467,8 @@
     "sql": null,
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "(sin explicación)"
   },
   {
     "id": "A2",
@@ -2344,7 +2485,8 @@
     "sql": "SELECT p.product_name AS producto, st.quantity AS stock, st.quantity AS",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "near \"LIMIT\": syntax error"
+    "fallo_detalle": "near \"LIMIT\": syntax error",
+    "explicacion_juez": "(sin explicación)"
   },
   {
     "id": "A3",
@@ -2361,7 +2503,8 @@
     "sql": null,
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL."
+    "fallo_detalle": "La respuesta del modelo no contiene ninguna consulta SQL.",
+    "explicacion_juez": "La reason no coincide es porque la consulta no se ha ejecutado correctamente. Probablemente no he scrito la consulta correcta o hay errores en la estructura de la base de datos."
   },
   {
     "id": "A4",
@@ -2378,6 +2521,7 @@
     "sql": "SELECT \n    SUM(net_amount) AS ingreso_neto\nFROM v_orders\nWHERE \n    order_status = 4 AND \n    category_name = 'Mountain Bikes' AND \n    customers.city = 'Texas' AND \n    strftime('%Y', order_date) = '2016'\nGROUP BY \n    'category_name' AS category_name\nORDER BY \n    'net_amount' DESC",
     "respuesta": "No logré construir una consulta válida para esa pregunta. Intenta reformularla con más detalle, por ejemplo indicando el periodo, la tienda, la categoría o la métrica que te interesa.",
     "fallo_categoria": "error_ejecucion",
-    "fallo_detalle": "SQL con errores de sintaxis: Invalid expression / Unexpected token. Line 10, Col: 22."
+    "fallo_detalle": "SQL con errores de sintaxis: Invalid expression / Unexpected token. Line 10, Col: 22.",
+    "explicacion_juez": "La consulta SQL no coincide con la referencia porque no se aplicó correctamente la condición de filtering de `customers.city = 'Texas'`. Además, la suma de `net_amount` es de $86,018.94, pero la refocha tiene dos filas, lo que sugiere que hay dos filas que no se están procesando correctamente. Por lo tanto, la reason es que la condición de filtering no se aplicó correctamente."
   }
 ]
