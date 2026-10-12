@@ -38,6 +38,7 @@ import sqlglot
 from sqlglot import exp
 
 import config
+import feedback as fb
 import sql_engine as se
 from business_queries import BY_ID, render_sql
 
@@ -210,6 +211,22 @@ def reclassify_stored(result: dict, item: dict, ref_cache: dict) -> dict:
     return result
 
 
+def explain_stored(result: dict, item: dict, ref_cache: dict, judge_fn) -> dict:
+    """Añade explicacion_juez a un fallo guardado (re-ejecuta su SQL; el veredicto no cambia)."""
+    if result["ok"] or result.get("fuente") == "verificada":
+        result["explicacion_juez"] = None
+        return result
+    if item["id"] not in ref_cache:
+        ref_cache[item["id"]] = se.execute_sql(se.validate_sql(item["sql"]))
+    try:
+        got = se.execute_sql(se.validate_sql(result["sql"])) if result.get("sql") else None
+    except Exception:  # noqa: BLE001 - el juez también explica SQL que no se ejecuta
+        got = None
+    result["explicacion_juez"] = judge_fn(item["pregunta"], result.get("sql"), got,
+                                          ref_cache[item["id"]], result["modelo"])
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Ejecución
 # ---------------------------------------------------------------------------
@@ -224,38 +241,150 @@ def oracle_llm(items: list[dict]):
     return llm
 
 
-def run_item(item: dict, model: str, mode: str, llm, ref_cache: dict) -> dict:
+def make_attempt_check(item: dict, ref: pd.DataFrame):
+    """attempt_check para answer_question: el comparador decide; el feedback va por categoría
+    (fase 7) y describe solo la forma del problema, nunca valores de la referencia."""
+    ref_rows = len(ref)
+    ref_cols = len(item["check"].get("key_columns") or ref.columns)
+
+    def check(sql, df, error):
+        if error:
+            cat, _ = classify_failure(item, ref, None, sql, error, error)
+            return False, fb.feedback_for(cat, error=error.rsplit("': ", 1)[-1])
+        ok, reason = compare_results(ref, df, item["check"])
+        if ok:
+            return True, ""
+        cat, _ = classify_failure(item, ref, df, sql, None, reason)
+        agg_differs = bool(sql) and _aggregation_signature(item["sql"]) != _aggregation_signature(sql)
+        kinds = fb.filter_kinds(_filter_signature(item["sql"]), _filter_signature(sql or ""))
+        return False, fb.feedback_for(cat, got=df, ref_rows=ref_rows, ref_cols=ref_cols,
+                                      agg_differs=agg_differs, filter_kinds=kinds)
+    return check
+
+
+def run_item(item: dict, model: str, mode: str, llm, ref_cache: dict,
+             max_intentos: int | None = None, judge=None) -> dict:
+    """Evalúa un ítem. max_intentos=None reproduce el chat en producción (reintento solo si la
+    SQL falla). Con max_intentos=N se dan hasta N intentos con feedback por categoría y se corta
+    en el primer acierto. `judge(...)` solo redacta explicacion_juez; el veredicto (ok) sale
+    siempre de compare_results."""
     if item["id"] not in ref_cache:
         ref_cache[item["id"]] = se.execute_sql(se.validate_sql(item["sql"]))
     ref = ref_cache[item["id"]]
 
     full = mode == "full"
+    check = make_attempt_check(item, ref) if max_intentos else None
     t0 = time.perf_counter()
-    r = se.answer_question(item["pregunta"], model, llm=llm, use_router=full, synthesize_answer=full)
+    r = se.answer_question(item["pregunta"], model, llm=llm, use_router=full, synthesize_answer=full,
+                           max_attempts=max_intentos, attempt_check=check)
     total = time.perf_counter() - t0
     ok, reason = (False, r.error or "error") if r.error else compare_results(ref, r.df, item["check"])
     category = detail = None
     if not ok:  # los aciertos no se reclasifican
         category, detail = classify_failure(item, ref, r.df, r.sql, r.error, reason)
+    explanation = None
+    if not ok and judge is not None and r.source != "verificada":
+        explanation = judge(item["pregunta"], r.sql, r.df, ref, model)  # solo texto: no cambia ok
     return {
         "id": item["id"], "nivel": item["nivel"], "modelo": model, "modo": mode,
         "ok": ok, "motivo": reason, "fuente": r.source, "consulta_verificada": r.business_query_id,
-        "intentos": r.attempts, "latencia_s": round(total - r.timings["synth"], 2),
+        "intentos": r.attempts, "max_intentos": max_intentos or config.MAX_ATTEMPTS,
+        "acerto_en_intento": (r.hit_attempt or r.attempts) if ok else None,
+        "latencia_s": round(total - r.timings["synth"], 2),
         "latencia_total_s": round(total, 2) if full else None,
         "sql": r.sql, "respuesta": r.answer if full else None,
         "fallo_categoria": category, "fallo_detalle": detail,
+        "explicacion_juez": explanation,
+        "feedback_intentos": [a.get("feedback") for a in r.attempt_log if a.get("feedback")],
     }
 
 
+# ---------------------------------------------------------------------------
+# Consistencia: N corridas independientes por pregunta
+# ---------------------------------------------------------------------------
+
+def result_fingerprint(df: pd.DataFrame | None, error: str | None) -> str:
+    """Huella del resultado para comparar corridas: valores normalizados, en orden de fila."""
+    if error or df is None:
+        return "ERROR: " + (error or "sin resultado").rsplit("': ", 1)[-1][:80]
+    rows = [tuple(round(v, 2) if isinstance(v, float) else v for v in map(_norm, row))
+            for row in df.itertuples(index=False)]
+    return repr((tuple(map(str, df.columns)), rows))
+
+
+def run_consistency(model: str, items: list[dict], n: int, llm, ref_cache: dict) -> list[dict]:
+    """Cada corrida: modo LLM libre, un solo intento, mismo prompt y temperatura que producción."""
+    out = []
+    for item in items:
+        if item["id"] not in ref_cache:
+            ref_cache[item["id"]] = se.execute_sql(se.validate_sql(item["sql"]))
+        ref = ref_cache[item["id"]]
+        runs = []
+        for k in range(n):
+            t0 = time.perf_counter()
+            r = se.answer_question(item["pregunta"], model, llm=llm, use_router=False,
+                                   synthesize_answer=False, max_attempts=1)
+            ok = False if r.error else compare_results(ref, r.df, item["check"])[0]
+            runs.append({"ok": ok, "huella": result_fingerprint(r.df, r.error), "sql": r.sql,
+                         "s": round(time.perf_counter() - t0, 2)})
+        prints = [x["huella"] for x in runs]
+        modal = max(set(prints), key=prints.count)
+        correct = [x["huella"] for x in runs if x["ok"]]
+        row = {"id": item["id"], "nivel": item["nivel"], "pregunta": item["pregunta"], "modelo": model,
+               "n": n, "correctas": sum(x["ok"] for x in runs),
+               "consistencia_pct": round(100 * prints.count(modal) / n),
+               "resultados_distintos": len(set(prints)),
+               "sql_distintas": len({x["sql"] for x in runs}),
+               "correctas_identicas": (len(set(correct)) == 1) if (n >= 3 and len(correct) >= 2) else None,
+               "segundos": round(sum(x["s"] for x in runs), 1)}
+        out.append(row)
+        print(f"{model:<14} {item['id']:<4} {row['correctas']}/{n} correctas · consistencia "
+              f"{row['consistencia_pct']}% · {row['sql_distintas']} SQL distintas", flush=True)
+    return out
+
+
+def consistency_report(rows: list[dict], models: list[str], n: int, seconds: float) -> str:
+    out = ["# Consistencia del modelo (N corridas independientes por pregunta)", "",
+           f"- Fecha: {datetime.now():%Y-%m-%d %H:%M} · N = {n} · modo LLM libre (sin enrutador), "
+           "1 intento por corrida, sin feedback entre corridas; temperatura de producción (0).",
+           f"- Tiempo total: {seconds / 60:.1f} min.",
+           "- *Correctas* = corridas que pasan el comparador determinista. *Consistencia* = % de "
+           "corridas con el resultado más frecuente (huella de valores normalizados, o el error). "
+           "*Correctas idénticas* (N ≥ 3) = si todas las corridas correctas devolvieron exactamente "
+           "los mismos valores y columnas.",
+           "- **En negrita**: consistencia < 100 % (el modelo no es confiable en esa pregunta, "
+           "aunque a veces acierte).", "",
+           "| ID | Nivel | Pregunta | " + " | ".join(f"{m}: correctas / consistencia" for m in models)
+           + " |", "|---|---|---|" + "---|" * len(models)]
+    by = {(r["modelo"], r["id"]): r for r in rows}
+    for item_id in dict.fromkeys(r["id"] for r in rows):
+        any_row = next(r for r in rows if r["id"] == item_id)
+        cells = []
+        for m in models:
+            r = by.get((m, item_id))
+            if not r:
+                cells.append("—")
+                continue
+            ident = {True: "", False: " (correctas con valores distintos)", None: ""}[r["correctas_identicas"]]
+            cell = f"{r['correctas']}/{r['n']} · {r['consistencia_pct']} %{ident}"
+            cells.append(f"**{cell}**" if r["consistencia_pct"] < 100 or r["correctas_identicas"] is False
+                         else cell)
+        out.append(f"| {item_id} | {any_row['nivel']} | {any_row['pregunta']} | " + " | ".join(cells) + " |")
+    low = [r for r in rows if r["consistencia_pct"] < 100]
+    out += ["", f"**Preguntas con consistencia < 100 %:** {len(low)} de {len(rows)}."]
+    return "\n".join(out) + "\n"
+
+
 def evaluate(models: list[str], modes: list[str], levels: list[str], items: list[dict],
-             llm_factory) -> list[dict]:
+             llm_factory, max_intentos: int | None = None, judge_factory=None) -> list[dict]:
     results, ref_cache = [], {}
     selected = [it for it in items if it["nivel"] in levels]
     for model in models:
         llm = llm_factory(model)
+        judge = judge_factory(model) if judge_factory else None
         for mode in modes:
             for item in selected:
-                res = run_item(item, model, mode, llm, ref_cache)
+                res = run_item(item, model, mode, llm, ref_cache, max_intentos, judge)
                 results.append(res)
                 mark = "OK " if res["ok"] else "MAL"
                 print(f"[{mark}] {model:<18} {mode:<4} {item['id']:<4} {res['latencia_s']:>6.1f}s "
@@ -389,9 +518,19 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--oracle", action="store_true", help="usa la SQL de referencia como LLM (sin Ollama)")
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--fresh", action="store_true", help="no fusionar con resultados previos")
+    ap.add_argument("--max-intentos", type=int, default=None,
+                    help="hasta N intentos con feedback por categoría y corte en el primer acierto "
+                         "(por omisión: comportamiento del chat, reintento solo si la SQL falla)")
+    ap.add_argument("--sin-juez", action="store_true",
+                    help="no pedir explicacion_juez para los fallos (ahorra llamadas al LLM)")
+    ap.add_argument("--consistencia", type=int, default=1,
+                    help="N > 1: corre cada pregunta (básico + negocio) N veces y mide consistencia")
     ap.add_argument("--reclasificar", action="store_true",
                     help="añade fallo_categoria a eval/resultados.json sin llamar a Ollama "
                          "(vuelve a ejecutar la SQL guardada de cada fallo)")
+    ap.add_argument("--explicar", action="store_true",
+                    help="añade explicacion_juez a los fallos ya guardados en el JSON (re-ejecuta "
+                         "la SQL guardada; el juez solo redacta, no cambia ok)")
     args = ap.parse_args(argv)
 
     items = load_golden()
@@ -409,6 +548,25 @@ def main(argv: list[str] | None = None) -> int:
         out.write_text(build_report(stored, models, modes, {}, "Resultados de la evaluación Text-to-SQL"),
                        encoding="utf-8")
         print(f"Clasificados {sum(not r['ok'] for r in stored)} fallos. Reporte escrito en {out}")
+        return 0
+
+    if args.explicar:
+        import judge
+        import ollama_manager as om
+        json_path = (args.out or EVAL_DIR / "resultados.md").with_suffix(".json")
+        stored = json.loads(json_path.read_text(encoding="utf-8"))
+        by_id, ref_cache = {it["id"]: it for it in items}, {}
+        only = set(args.models) if "--models" in (argv or sys.argv) else None
+        for model in dict.fromkeys(r["modelo"] for r in stored):
+            if only and model not in only:
+                continue
+            for r in stored:
+                if r["modelo"] == model:
+                    explain_stored(r, by_id[r["id"]], ref_cache, judge.explain_failure)
+                    if r["explicacion_juez"]:
+                        print(f"{model:<14} {r['modo']:<4} {r['id']:<4} {r['explicacion_juez'][:100]}", flush=True)
+            json_path.write_text(json.dumps(stored, ensure_ascii=False, indent=2), encoding="utf-8")
+            om.unload_model(model)
         return 0
 
     if args.oracle:
@@ -438,6 +596,22 @@ def main(argv: list[str] | None = None) -> int:
 
         def llm_factory(model):
             return om.chat
+
+        if args.consistencia > 1:
+            # Por defecto solo el modelo de producción (los otros dos, opcionales con --models).
+            models_c = models if "--models" in (argv or sys.argv) else [config.DEFAULT_MODEL]
+            items_c = [it for it in items if it["nivel"] in ("basico", "negocio")]
+            t_start, rows, ref_cache = time.perf_counter(), [], {}
+            for model in models_c:
+                rows += run_consistency(model, items_c, args.consistencia, om.chat, ref_cache)
+                om.unload_model(model)
+            seconds = time.perf_counter() - t_start
+            out_c = args.out or EVAL_DIR / "consistencia.md"
+            out_c.write_text(consistency_report(rows, models_c, args.consistencia, seconds), encoding="utf-8")
+            out_c.with_suffix(".json").write_text(json.dumps(rows, ensure_ascii=False, indent=2),
+                                                  encoding="utf-8")
+            print(f"\nConsistencia: {out_c} ({seconds / 60:.1f} min)")
+            return 0
         out = args.out or EVAL_DIR / "resultados.md"
         title = "Resultados de la evaluación Text-to-SQL"
 
@@ -464,7 +638,12 @@ def main(argv: list[str] | None = None) -> int:
     for model in models:
         if previous and not args.oracle:
             om.unload_model(previous)  # desactivación dinámica: libera la RAM del anterior
-        results += evaluate([model], args.modes, args.levels, items, llm_factory)
+        judge_factory = None
+        if not args.oracle and not args.sin_juez:
+            import judge
+            judge_factory = lambda _m: (lambda q, sql, df, ref, m: judge.explain_failure(q, sql, df, ref, m))  # noqa: E731
+        results += evaluate([model], args.modes, args.levels, items, llm_factory,
+                            args.max_intentos, judge_factory)
         save()  # guarda tras cada modelo para no perder trabajo si algo falla
         previous = model
     if previous and not args.oracle:

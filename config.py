@@ -24,6 +24,11 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
 DEFAULT_MODEL = "qwen2.5:1.5b"
 SUPPORTED_MODELS = ["qwen2.5:1.5b", "llama3.2:1b", "deepseek-r1:1.5b"]
 
+# Intentos de generar SQL por pregunta (el 1.º más los reintentos). 2 = comportamiento del chat
+# en producción: un reintento si la SQL falla al validar o ejecutar. El harness de evaluación
+# puede pedir más con answer_question(..., max_attempts=N) sin cambiar el chat.
+MAX_ATTEMPTS = 2
+
 # Tiempo que Ollama mantiene el modelo en RAM tras la última petición (su valor por defecto,
 # 5 min, lo descargaba si el presentador hablaba un rato entre preguntas).
 KEEP_ALIVE = "60m"

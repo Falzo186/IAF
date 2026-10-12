@@ -1,0 +1,36 @@
+Avance — LLM local qwen2.5:1.5b generando su propia SQL (enrutador desactivado)
+
+Consultando N02_riesgo_quiebre_stock…
+[N02_riesgo_quiebre_stock] ¿Qué productos se venden mucho pero están a punto de agotarse?
+  Tiempo: 27.2 s · intentos de SQL: 1
+  Respuesta: Los productos que se venden mucho pero están a punto de agotarse son:
+
+1. Trek Remedy 9.8 - 2017: 21 unidad(s) en stock, disponible(s) en 1 unidad(s).
+2. Trek Domane S 5 Disc - 2017: 22 unidad(s) en stock, disponible(s) en 1 unidad(s).
+3. Trek Domane SLR 8 Disc - 2018: 1 unidad(s) en stock, disponible(s) en 0 unidad(s).
+4. Trek Domane SL 6 - 2018: 3 unidad(s) en stock, disponible(s) en 0 unidad(s).
+5. Trek CrossRip+ - 2018: 1 unidad(s) en stock, disponible(s) en 0 unidad(s).
+6. Electra Townie Original 3i EQ Ladies' - 2018: 0 unidad(s) en stock, disponible(s) en 0 unidad(s).
+7. Electra Townie Commute Go! - 2018: 2 unidad(s) en stock, disponible(s) en 0
+
+Consultando N05_costo_ineficiencia_logistica…
+[N05_costo_ineficiencia_logistica] ¿Cuál es el monto de las órdenes entregadas con retraso, por tienda?
+  Tiempo: 11.4 s · intentos de SQL: 1
+  Respuesta: El monto total de las órdenes entregadas con retraso en las tiendas Baldwin Bikes, Santa Cruz Bikes y Rowlett Bikes suman $2,040,816.67.
+
+Consultando N06_inventario_inactivo…
+[N06_inventario_inactivo] ¿Cuánto dinero tenemos parado en inventario que nunca se ha vendido?
+  Tiempo: 2.1 s · intentos de SQL: 1
+  Respuesta: El resultado (unidades paradas) es 13,511.
+
+Consultando N08_ticket_promedio_sucursal…
+[N08_ticket_promedio_sucursal] ¿Cuál es el ticket promedio por tienda?
+  Tiempo: 6.5 s · intentos de SQL: 1
+  Respuesta: El ticket promedio por tienda en Rowlett Bikes es de $1,637.85.
+
+Consultando N10_impacto_cancelaciones…
+[N10_impacto_cancelaciones] ¿Cuánto ingreso se perdió por órdenes rechazadas?
+  Tiempo: 2.9 s · intentos de SQL: 1
+  Respuesta: El resultado (ingreso perdido) es $23,219.90.
+
+Archivos: C:\Users\alexp\IAF\avance\json (5 JSON) y C:\Users\alexp\IAF\avance\resumen.txt

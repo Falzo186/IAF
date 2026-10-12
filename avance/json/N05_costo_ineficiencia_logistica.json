@@ -1,0 +1,23 @@
+{
+  "necesidad_id": "N05_costo_ineficiencia_logistica",
+  "pregunta": "¿Cuál es el monto de las órdenes entregadas con retraso, por tienda?",
+  "modelo": "qwen2.5:1.5b",
+  "sql_generada": "SELECT store_name AS tienda, SUM(net_total) AS monto_retraso\nFROM v_orders\nWHERE is_shipped = 1 AND is_late = 1\nGROUP BY tienda\nORDER BY monto_retraso DESC\nLIMIT 500",
+  "filas": [
+    {
+      "tienda": "Baldwin Bikes",
+      "monto_retraso": 1430618.9874
+    },
+    {
+      "tienda": "Santa Cruz Bikes",
+      "monto_retraso": 444595.7461
+    },
+    {
+      "tienda": "Rowlett Bikes",
+      "monto_retraso": 167692.3348
+    }
+  ],
+  "respuesta_lenguaje_natural": "El monto total de las órdenes entregadas con retraso en las tiendas Baldwin Bikes, Santa Cruz Bikes y Rowlett Bikes suman $2,040,816.67.",
+  "tiempo_segundos": 11.41,
+  "generado_en": "2026-09-26T11:06:56"
+}

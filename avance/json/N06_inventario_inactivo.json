@@ -1,0 +1,14 @@
+{
+  "necesidad_id": "N06_inventario_inactivo",
+  "pregunta": "¿Cuánto dinero tenemos parado en inventario que nunca se ha vendido?",
+  "modelo": "qwen2.5:1.5b",
+  "sql_generada": "SELECT SUM(quantity) AS unidades_paradas\nFROM stocks\nWHERE quantity > 0\nLIMIT 500",
+  "filas": [
+    {
+      "unidades_paradas": 13511
+    }
+  ],
+  "respuesta_lenguaje_natural": "El resultado (unidades paradas) es 13,511.",
+  "tiempo_segundos": 2.12,
+  "generado_en": "2026-09-26T11:06:58"
+}
