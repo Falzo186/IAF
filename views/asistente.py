@@ -102,9 +102,11 @@ def reset_conversation() -> None:
 # --- Encabezado: modelo y estado ---------------------------------------------------
 
 status = ollama_status()
-options = list(dict.fromkeys(config.SUPPORTED_MODELS + status["models"]))
+# Solo los 3 modelos soportados, aunque haya otros instalados (qwen3:4b, 7B…): nunca se ofrecen.
+# Si uno no está descargado se lista igual y el indicador dice "↓ no descargado".
+options = list(config.SUPPORTED_MODELS)
 if ss["active_model"] not in options:
-    options.append(ss["active_model"])
+    ss["active_model"] = config.DEFAULT_MODEL
 
 st.markdown("## Asistente")
 c_model, c_state, c_ai, c_judge = st.columns([2, 1, 1, 1], vertical_alignment="bottom")

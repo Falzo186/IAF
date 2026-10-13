@@ -728,18 +728,110 @@ SYNTH_SYSTEM = (
     "aparezcan en el resultado; no inventes ni calcules cifras nuevas. Escribe el dinero como "
     "$1,234.56. No menciones SQL, tablas, columnas ni consultas."
 )
+TOTALS_INSTRUCTION = (
+    "El total ya viene calculado en total_real sobre TODAS las filas (no solo las que se "
+    "muestran): úsalo tal cual, no lo recalcules y no inventes una suma distinta."
+)
+
+# ¿La pregunta pide un total? ("total", "suma", "en conjunto", "cuánto dinero/capital…")
+_TOTAL_INTENT_RE = re.compile(
+    r"\b(total\w*|suma\w*|sumad\w*|en conjunto|acumulad\w*|"
+    r"cuant[oa]s?\s+(?:\w+\s+){0,2}(?:dinero|capital|valor|monto|ingreso\w*|perd\w*|cuesta\w*|"
+    r"costa\w*|unidades|vend\w*|gast\w*|ced\w*))\b")
+# Columnas que NO se suman: promedios, porcentajes, tasas, precios unitarios, rankings, ids…
+_NOT_SUMMABLE_RE = re.compile(r"prom|avg|pct|porcentaje|percent|tasa|ratio|rotacion|ranking|rank|"
+                              r"_id$|^id|precio|price|dias|max_|min_|meses|anio|year|mes$|ticket")
+
+
+_EXPLICIT_TOTAL_RE = re.compile(r"\b(total\w*|suma\w*|sumad\w*|en conjunto|acumulad\w*)\b")
+_AVERAGE_RE = re.compile(r"\b(promedio|media|ticket)\b")
+_TOTAL_ROW_RE = re.compile(r"^(total|todas|todos|total general)$")
+
+
+def wants_total(question: str) -> bool:
+    """¿Pide la pregunta un total? Un promedio ("en promedio", "ticket") no, salvo que también
+    diga "total" o "suma" explícitamente."""
+    norm = normalize_text(question)
+    if _AVERAGE_RE.search(norm) and not _EXPLICIT_TOTAL_RE.search(norm):
+        return False
+    return bool(_TOTAL_INTENT_RE.search(norm))
+
+
+def compute_totals(question: str, df: pd.DataFrame) -> dict[str, float]:
+    """total_real: suma con pandas de cada columna sumable del DataFrame COMPLETO, si la pregunta
+    implica un total y hay más de una fila. El LLM nunca suma: recibe este dato ya calculado."""
+    if df is None or len(df) < 2 or not wants_total(question):
+        return {}
+    cols = [c for c in df.select_dtypes("number").columns
+            if not _NOT_SUMMABLE_RE.search(normalize_text(str(c)))]
+    # Si el resultado ya trae una fila de total (N5: "Total", N10: "Total / Todas"), esa es el
+    # total real: sumar todas las filas la contaría dos veces junto con los desgloses.
+    text_cols = [c for c in df.columns if c not in df.select_dtypes("number").columns]
+    for _, row in df.iterrows():
+        if any(_TOTAL_ROW_RE.match(normalize_text(str(row[c]))) for c in text_cols):
+            return {str(c): float(row[c]) for c in cols}
+    return {str(c): float(df[c].sum()) for c in cols}
+
+
+def _total_value_text(col: str, value: float) -> str:
+    return format_value(round(value, 2) if not float(value).is_integer() else int(value), col)
 
 
 def build_synthesis_messages(question: str, sql: str, df: pd.DataFrame,
-                             key_fact: str | None = None) -> list[dict]:
+                             key_fact: str | None = None,
+                             totals: dict[str, float] | None = None) -> list[dict]:
     shown = min(len(df), SYNTH_ROWS)
     fact = f"Hallazgo principal (ya calculado, úsalo como base): {key_fact}\n\n" if key_fact else ""
+    if totals:
+        lines = "\n".join(f"- total_real de {col} ({len(df)} filas): {_total_value_text(col, v)}"
+                           for col, v in totals.items())
+        fact += f"{TOTALS_INSTRUCTION}\n{lines}\n\n"
     user = (
         f"Pregunta: {question}\n\n{fact}"
         f"Consulta ejecutada:\n{sql}\n\n"
         f"Resultado ({len(df)} filas en total; se muestran {shown}):\n{df_to_markdown(df)}"
     )
     return [{"role": "system", "content": SYNTH_SYSTEM}, {"role": "user", "content": user}]
+
+
+_NUM_IN_TEXT = r"(\$?\d[\d,]*(?:\.\d+)?)"
+_TOTAL_CLAIM_RE = re.compile(
+    r"(\b(?:total|totales|en total|suman?|suma de|sumando|asciende[n]? a|en conjunto|acumulad[oa]s?)"
+    r"\b[^.$\d]{0,40}?)" + _NUM_IN_TEXT, re.IGNORECASE)
+
+
+def _parse_number(text: str) -> float | None:
+    try:
+        return float(text.replace("$", "").replace(",", "").strip())
+    except ValueError:
+        return None
+
+
+def enforce_totals(text: str, totals: dict[str, float]) -> str:
+    """Si el texto afirma un total distinto de total_real, lo sustituye por total_real; si no
+    menciona total_real en absoluto, lo agrega al final. El total siempre lo pone Python."""
+    if not totals or not text:
+        return text
+    money = [c for c in totals if _MONEY_RE.search(c)]
+    primary = money[0] if money else next(iter(totals))
+    others = [c for c in totals if c != primary]
+
+    def fix(m: re.Match) -> str:
+        raw = m.group(2)
+        value = _parse_number(raw)
+        if value is None:
+            return m.group(0)
+        col = primary if ("$" in raw or not others) else others[0]
+        real = totals[col]
+        if any(abs(value - v) <= max(0.01, abs(v) * 1e-4) for v in totals.values()):
+            return m.group(0)                      # ya es un total real
+        return m.group(1) + _total_value_text(col, real)
+
+    text = _TOTAL_CLAIM_RE.sub(fix, text)
+    formatted = _total_value_text(primary, totals[primary])
+    if formatted not in text and formatted.replace("$", "") not in text:
+        text = f"{text.rstrip()} El total real es {formatted}."
+    return text
 
 
 def template_answer(df: pd.DataFrame, business_query_id: str | None) -> str:
@@ -762,11 +854,12 @@ def synthesize(question: str, sql: str, df: pd.DataFrame, model: str, llm: LLM,
         return single_value_answer(df), False
     try:
         key_fact = template_answer(df, business_query_id) if business_query_id else None
-        text = llm(model, build_synthesis_messages(question, sql, df, key_fact), **SYNTH_OPTIONS)
+        totals = compute_totals(question, df)
+        text = llm(model, build_synthesis_messages(question, sql, df, key_fact, totals), **SYNTH_OPTIONS)
         text = _THINK_RE.sub("", text or "").strip()
         if "</think>" in text.lower():
             text = text[text.lower().rfind("</think>") + len("</think>"):].strip()
-        return (text or template_answer(df, business_query_id)), True
+        return enforce_totals(text or template_answer(df, business_query_id), totals), True
     except Exception:
         return template_answer(df, business_query_id), True
 
@@ -1043,8 +1136,9 @@ def answer_with_judge(pregunta: str, modelo: str, modelo_juez: str | None = None
                                           exclude_need=referencia.need_id if referencia else None,
                                           con_referencia=referencia is not None)
                 result.timings["judge"] += time.perf_counter() - tj
-                if referencia is not None:
-                    critique = fb.sanitize(critique, referencia.df)
+                # Nunca SQL resuelta; con referencia, tampoco cifras ni textos de la respuesta.
+                critique = (fb.sanitize(critique, referencia.df) if referencia is not None
+                            else fb.strip_sql(critique))
                 if critique:
                     diagnostico = f"{diagnostico} {critique}".strip() if diagnostico else critique
             result.intentos.append(_intento(n, sql, exito, time.perf_counter() - t0, diagnostico, criterio))

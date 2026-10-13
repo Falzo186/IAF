@@ -75,12 +75,32 @@ def has_digits(text: str) -> bool:
 
 
 _NUMBER_RE = re.compile(r"\d[\d,.]*")
+_CODE_BLOCK_RE = re.compile(r"```.*?(?:```|$)", re.DOTALL)
+_INLINE_CODE_RE = re.compile(r"`[^`]*`")
+_SQL_WORD_RE = re.compile(r"\b(SELECT|FROM|WHERE|JOIN|GROUP\s+BY|ORDER\s+BY)\b", re.IGNORECASE)
+# Líneas que empiezan como una consulta (o como su continuación).
+_SQL_LINE_RE = re.compile(r"^\s*(SELECT|WITH|FROM|WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT|"
+                          r"(LEFT\s+|INNER\s+)?JOIN|UNION)\b.*$", re.IGNORECASE | re.MULTILINE)
+# Una consulta escrita en medio de una frase: desde SELECT hasta el ";" o el fin de la frase.
+_INLINE_SELECT_RE = re.compile(r"\bSELECT\b.*?(?:;|\.(?=\s|$)|$)", re.IGNORECASE | re.DOTALL)
+
+
+def strip_sql(text: str) -> str:
+    """Quita de una crítica toda SQL lista para copiar (bloques de código, código en línea, líneas
+    que empiezan como consulta y consultas en medio de una frase) y deja solo la prosa. Los modelos
+    chicos no siempre obedecen la instrucción de no escribir SQL."""
+    text = _CODE_BLOCK_RE.sub(" ", str(text or ""))
+    # `store_name` es un nombre de columna (se deja, sin las comillas); `SELECT ...` es SQL (se quita).
+    text = _INLINE_CODE_RE.sub(lambda m: " " if _SQL_WORD_RE.search(m.group(0)) else m.group(0)[1:-1], text)
+    text = _SQL_LINE_RE.sub(" ", text)
+    text = _INLINE_SELECT_RE.sub(" ", text)
+    return " ".join(text.split())
 
 
 def sanitize(text: str, ref: pd.DataFrame | None) -> str:
     """Quita de un texto libre (la crítica del juez) toda cifra y todo texto de la referencia,
     para que nunca le llegue al modelo el valor correcto, aunque el juez lo escriba por accidente."""
-    text = str(text or "")
+    text = strip_sql(text)
     if ref is not None:
         values = {str(v) for v in ref.to_numpy().ravel() if isinstance(v, str) and len(v.strip()) > 2}
         for v in sorted(values, key=len, reverse=True):

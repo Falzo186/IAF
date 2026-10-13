@@ -1,0 +1,46 @@
+{
+  "modelo": "qwen2.5:1.5b",
+  "criticas": [
+    {
+      "necesidad": "N8",
+      "sql_fallida": "SELECT store_name AS tienda, AVG(net_amount) AS gasto_promedio FROM v_order_lines WHERE order_status = 4 GROUP BY store_name",
+      "critica_en_bruto": "La consulta proporcionada calcula el promedio de los montos totales de los pedidos por cliente en cada tienda, pero no responde a la pregunta específica de cuánto gasta en promedio un cliente por pedido en cada tienda. \n\n**Cambio necesario:**\n\n1. **Cambiar la columna de agrupación:** La columna de agrupación debería ser `order_id` en lugar de `store_name`, ya que el pedido se realiza en cada tienda, no en cada tienda individualmente.\n\n2. **Cambiar la columna de agrupación:** La columna de agrupación debería ser `order_id` en lugar de `store_name`, ya que el pedido se realiza en cada tienda",
+      "trae_sql": false,
+      "critica_que_llega_al_modelo": "La consulta proporcionada calcula el promedio de los montos totales de los pedidos por cliente en cada tienda, pero no responde a la pregunta específica de cuánto gasta en promedio un cliente por pedido en cada tienda. **Cambio necesario:** […] **Cambiar la columna de agrupación:** La columna de agrupación debería ser order_id en lugar de store_name, ya que el pedido se realiza en cada tienda, no en cada tienda individualmente. […] **Cambiar la columna de agrupación:** La columna de agrupación debería ser order_id en lugar de store_name, ya que el pedido se realiza en cada tienda"
+    },
+    {
+      "necesidad": "N3",
+      "sql_fallida": "SELECT staff_name AS vendedor, SUM(net_amount) AS ingreso FROM v_order_lines WHERE brand_name = 'Electric Bikes' AND order_status = 4 GROUP BY staff_name",
+      "critica_en_bruto": "La consulta está mal porque no se está agrupando por el vendedor, sino por el ingreso neto. Además, se está filtrando por la marca 'Electric Bikes' en lugar de filtrar por el estado '4' (completado). Por lo tanto, la consulta debería ser:\n\n```sql\nSELECT staff_name AS vendedor, SUM(net_amount) AS ingreso\nFROM v_order_lines\nWHERE order_status = 4\nGROUP BY staff_name\n```",
+      "trae_sql": true,
+      "critica_que_llega_al_modelo": "La consulta está mal porque no se está agrupando por el vendedor, sino por el ingreso neto. Además, se está filtrando por la marca 'Electric Bikes' en lugar de filtrar por el estado '[…]' (completado). Por lo tanto, la consulta debería ser:"
+    },
+    {
+      "necesidad": "N5",
+      "sql_fallida": "SELECT store_name, COUNT(*) AS ordenes FROM v_orders WHERE is_late = 1 GROUP BY store_name",
+      "critica_en_bruto": "La consulta SQL proporcionada está mal porque no se está agrupando por tiendas, sino por el estado de las órdenes. Además, la columna `is_late` no existe en la tabla `v_orders`. Por lo tanto, la consulta no debería agrupar por `store_name` ni debería filtrar por `is_late = 1`.\n\n### Cambios necesarios:\n\n1. **Agrupar por tiendas**: La consulta debería agrupar por `store_name` para obtener la cantidad de órdenes por tienda.\n2. **Filtrar por tiendas**: La consulta debería filtrar por tiendas específicas, como Baldwin Bikes, Rowlett Bikes y Santa Cruz",
+      "trae_sql": false,
+      "critica_que_llega_al_modelo": "La consulta SQL proporcionada está mal porque no se está agrupando por tiendas, sino por el estado de las órdenes. Además, la columna is_late no existe en la tabla v_orders. Por lo tanto, la consulta no debería agrupar por store_name ni debería filtrar por is_late = […] ### Cambios necesarios: […] **Agrupar por tiendas**: La consulta debería agrupar por store_name para obtener la cantidad de órdenes por tienda. […] **Filtrar por tiendas**: La consulta debería filtrar por tiendas específicas, como […], […] y Santa Cruz"
+    },
+    {
+      "necesidad": "N2",
+      "sql_fallida": "SELECT product_name, SUM(quantity) AS stock FROM stocks JOIN products USING (product_id) GROUP BY product_name ORDER BY stock LIMIT 10",
+      "critica_en_bruto": "La consulta proporcionada está mal porque no se está agrupando por tienda, lo que hace que la consulta no responda a la pregunta de qué productos se venden mucho pero están a punto de agotarse en alguna tienda. Además, la consulta no está agrupando por tienda, lo que hace que la consulta no responda a la pregunta de qué productos se venden mucho pero están a punto de agotarse en alguna tienda. Por lo tanto, la consulta debe ser modificada para incluir la agrupación por tienda y para que se muestren los productos que se venden mucho pero están a punto de agotarse en alguna tienda.",
+      "trae_sql": false,
+      "critica_que_llega_al_modelo": "La consulta proporcionada está mal porque no se está agrupando por tienda, lo que hace que la consulta no responda a la pregunta de qué productos se venden mucho pero están a punto de agotarse en alguna tienda. Además, la consulta no está agrupando por tienda, lo que hace que la consulta no responda a la pregunta de qué productos se venden mucho pero están a punto de agotarse en alguna tienda. Por lo tanto, la consulta debe ser modificada para incluir la agrupación por tienda y para que se muestren los productos que se venden mucho pero están a punto de agotarse en alguna tienda."
+    }
+  ],
+  "n6": {
+    "pregunta": "¿Qué mercancía lleva meses en bodega sin moverse y cuánto capital tenemos ahí parado?",
+    "filas": 29,
+    "filas_mostradas_al_llm": 15,
+    "total_real": {
+      "unidades_inmovilizadas": 1234.0,
+      "valor_inmovilizado": 1891217.6600000001
+    },
+    "suma_de_las_filas_mostradas": 1679403.7100000002,
+    "hallazgo_determinista": "29 productos sin ventas recientes inmovilizan 1,234 unidades por $1,891,217.66; 29 nunca se han vendido.",
+    "antes_sin_total_real": "Por lo tanto, tenemos 29 productos en bodega que llevan meses sin ser vendidos, cuyo valor total en inmovilización es de $1,234,567.21.",
+    "ahora": "Por lo tanto, tenemos 29 productos en bodega que llevan meses sin moverse, cuyo valor total en inmovilización es de $1,891,217.66."
+  }
+}
