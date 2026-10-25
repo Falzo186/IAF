@@ -22,3 +22,8 @@ reportes/
 
 # Bitácora local de patrones (fase 7): se revisa con review_patterns.py
 learned_patterns.jsonl
+
+# Fase 11: llaves y cachés locales (nunca al repo)
+.env
+.cache/
+lote_modelo_grande.md
