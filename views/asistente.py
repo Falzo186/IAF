@@ -11,8 +11,10 @@ import pandas as pd
 import streamlit as st
 import yaml
 
+import bridge
 import config
 import learned_patterns
+import netmode
 import ollama_manager
 import pull_log
 import warmup
@@ -25,13 +27,19 @@ ss.setdefault("history", [])         # [{"question", "sql"}] para preguntas de s
 ss.setdefault("active_model", config.DEFAULT_MODEL)
 ss.setdefault("ai_writing", config.VERIFIED_SYNTHESIS)
 ss.setdefault("judge_mode", False)   # "Verificar con juez": apagado = chat de siempre
+ss.setdefault("context_mode", "Base")        # fase 11: Base = el prompt de siempre
+ss.setdefault("net_mode", "Local offline")   # fase 11: offline = ninguna conexión hacia fuera
 
 SOURCE_BADGES = {
     "verificada": ("Verificada", "badge-verificada"),
     "llm_anclada": ("IA anclada", "badge-anclada"),
     "llm": ("Generada por IA", "badge-llm"),
     "solo_lectura": ("Solo lectura", "badge-anclada"),
+    "llm_ejemplos": ("IA + ejemplos", "badge-ejemplos"),
+    "llm_grande": ("Generada por modelo grande (online)", "badge-grande"),
 }
+CONTEXT_MODES = {"Base": "base", "Few shot": "fewshot", "RAG": "rag", "Harness": "harness"}
+NET_MODES = {"Local offline": "offline", "Online gratis": "online"}
 SUGGESTIONS = [
     "¿Qué productos se venden mucho pero están a punto de agotarse?",
     "¿Cuánto dinero perdimos por pedidos rechazados?",
@@ -123,6 +131,33 @@ if judge_on:
     st.columns([2, 3])[0].selectbox(
         "Modelo juez", [SAME_MODEL] + config.SUPPORTED_MODELS, key="judge_model",
         help="Otro modelo como juez implica cargar dos modelos a la vez (más RAM).")
+
+# --- Configuración avanzada (fase 11): contexto y modo de red -------------------------------
+
+with st.expander("Configuración avanzada", expanded=False):
+    c_ctx, c_net = st.columns(2)
+    c_ctx.selectbox(
+        "Modo de contexto", list(CONTEXT_MODES), key="context_mode",
+        help="Base: el prompt de siempre. Few shot: añade ejemplos resueltos parecidos. RAG: ejemplos "
+             "sobre un umbral y esquema recortado. Harness: RAG + validación de columnas + reparación.")
+    c_net.radio(
+        "Modo de red", list(NET_MODES), key="net_mode", horizontal=True,
+        help="Local offline (por defecto): no se abre ninguna conexión hacia fuera, solo Ollama en "
+             "localhost. Online gratis: permite escalar al puente de un modelo grande de capa gratuita "
+             "cuando el local no logra una consulta; requiere llave (ver .env.example).")
+
+# El modo de red se aplica en cada ejecución (la app es de un solo usuario local).
+netmode.set_mode(NET_MODES[ss["net_mode"]])
+config.BRIDGE_ENABLED = ss["net_mode"] == "Online gratis"
+context_mode = CONTEXT_MODES[ss["context_mode"]]
+online = netmode.is_online()
+bridge_now = bridge.get_bridge() if online else None
+if online and not bridge_now.available():
+    st.caption(f"Puente online no disponible ({bridge_now.reason}); se sigue en local.")
+st.markdown(
+    "<span class='badge badge-online'>ONLINE gratis · puente opcional</span>" if online
+    else "<span class='badge badge-offline'>OFFLINE · sin red</span>", unsafe_allow_html=True)
+
 
 def model_loaded(model: str) -> bool:
     """¿Está el modelo cargado en RAM (/api/ps)? Si no se puede saber, se asume que sí."""
@@ -251,8 +286,10 @@ def render_result(r: se.QueryResult) -> None:
     if r.reference_id:
         chips.append(f"Comparada con la consulta verificada {r.reference_id}: "
                      + ("coincide" if r.reference_match else "no coincide"))
-    elif r.judge_model and r.source == "llm":
+    elif r.judge_model and r.source in ("llm", "llm_ejemplos"):
         chips.append("Revisada por el juez, sin respuesta de referencia")
+    if r.modo_contexto != "base":
+        chips.append(f"Contexto: {r.modo_contexto}")
     chips_html = "".join(f"<span class='chip'>{c}</span>" for c in chips)
     st.markdown(f"<span class='badge {css}'>{label}</span>{chips_html}", unsafe_allow_html=True)
 
@@ -260,6 +297,7 @@ def render_result(r: se.QueryResult) -> None:
         with st.expander("SQL"):
             st.code(r.sql, language="sql")
     render_attempts(r.intentos)
+    render_retrieval(r)
     if r.df is not None and not r.df.empty:
         fig = None
         if r.source == "verificada" and r.business_query_id in charts.NEED_CHARTS:
@@ -301,6 +339,40 @@ def attempt_line(i: dict) -> str:
         kind = "comentario del juez" if i["exito"] is None else "diagnóstico"
         line += f" — {kind}: “{md_text(i['diagnostico'])}”"
     return line
+
+
+def trace_line(t: dict) -> str:
+    """Una etapa del harness en una línea legible (sin SQL)."""
+    stage = t["etapa"]
+    if stage == "ruteo":
+        return f"**Ruteo** — {t['resultado']}{'' if t.get('usa_llm') else ' (sin LLM)'}"
+    if stage == "recuperacion":
+        n = len(t.get("ejemplos", []))
+        extra = f", umbral {t['umbral']}" if "umbral" in t else ""
+        recorte = ", esquema recortado" if t.get("esquema_recortado") else ""
+        return f"**Recuperación** — {t['modo']}: {n} ejemplo(s){extra}{recorte}" + (f" ({t['nota']})" if t.get("nota") else "")
+    if stage == "generacion":
+        return (f"**Generación** — {t['modelo']}, {t['intentos']} intento(s), validación estática de "
+                f"{t['validacion_estatica']}, reparación con {t['reparacion']}: {'ok' if t['ok'] else 'sin resultado'}")
+    if stage == "consistencia":
+        return f"**Consistencia** — {t['muestras']} muestras, ganó el resultado con {t['votos_ganador']} votos"
+    if stage == "escalamiento":
+        detail = t.get("motivo") or t.get("proveedor", "")
+        return f"**Escalamiento** — {t['estado']}" + (f": {detail}" if detail else "")
+    return f"**{stage}**"
+
+
+def render_retrieval(r: se.QueryResult) -> None:
+    """Ejemplos recuperados (pregunta y puntaje, nunca su SQL) y traza del harness."""
+    if r.ejemplos:
+        with st.expander(f"Ejemplos recuperados ({len(r.ejemplos)})"):
+            for e in r.ejemplos:
+                score = "" if e.get("score") is None else f" · puntaje {e['score']:.2f}"
+                st.markdown(f"- “{md_text(e['pregunta'])}” ({e['origen']}{score})")
+    if r.modo_contexto == "harness" and r.traza:
+        with st.expander("Traza del harness"):
+            for t in r.traza:
+                st.markdown("- " + md_text(trace_line(t)))
 
 
 def render_attempts(intentos: list[dict]) -> None:
@@ -368,11 +440,18 @@ if question:
                 route, bq, params, _ = se.plan_route(question)
                 ref = se.reference_for(bq, params) if route == "verificada" else None
                 judge_model = ss.get("judge_model", SAME_MODEL)
+                # Con referencia, el modelo no puede ver su SQL ni las de la misma necesidad en los ejemplos.
+                opts = ({"exclude_sql": [ref.sql], "exclude_ids": [ref.need_id], "exclude_need": ref.need_id}
+                        if ref else None)
                 result = se.answer_with_judge(
                     question, model, None if judge_model == SAME_MODEL else judge_model, ref,
-                    JUDGE_MAX_ATTEMPTS, history=ss["history"], llm=llm)
+                    JUDGE_MAX_ATTEMPTS, history=ss["history"], llm=llm,
+                    modo_contexto=context_mode, contexto_opts=opts)
             else:
-                result = se.answer_question(question, model, ss["history"], llm=llm, synthesize_answer=False)
+                result = se.answer_question(
+                    question, model, ss["history"], llm=llm, synthesize_answer=False,
+                    modo_contexto=context_mode,
+                    contexto_opts={"escalar": bool(online and bridge_now and bridge_now.available())})
             learned_patterns.log_pattern(result)  # bitácora para revisión humana; no afecta la respuesta
             if result.error is None and result.df is not None:
                 t1 = time.perf_counter()

@@ -73,6 +73,10 @@ h2, h3 { font-weight: 600; letter-spacing: -0.01em; }
 .badge-verificada { color: #9cc3f5; border-color: rgba(57, 135, 229, 0.55); background: rgba(57, 135, 229, 0.12); }
 .badge-anclada { color: #d6d6dc; border-color: rgba(255, 255, 255, 0.25); }
 .badge-llm { color: var(--text-muted); }
+.badge-ejemplos { color: #f4a259; border-color: rgba(244, 162, 89, 0.55); background: rgba(244, 162, 89, 0.10); }
+.badge-grande { color: #ffb38a; border-color: rgba(217, 83, 30, 0.6); background: rgba(217, 83, 30, 0.14); }
+.badge-offline { color: #b9d7b0; border-color: rgba(140, 200, 120, 0.5); background: rgba(140, 200, 120, 0.08); }
+.badge-online { color: #ffb38a; border-color: rgba(217, 83, 30, 0.6); background: rgba(217, 83, 30, 0.10); }
 .chip { color: var(--text-muted); font-size: 0.78rem; margin-right: 8px; }
 
 /* Estado del modelo */

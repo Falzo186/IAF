@@ -151,6 +151,7 @@ def run(question: str, model: str, history=None, llm=None, *, db_path: Path = co
     """Responde con el harness completo. Nunca lanza excepciones (como answer_question)."""
     t_total = time.perf_counter()
     opts = dict(contexto_opts or {})
+    escalar = bool(escalar or opts.pop("escalar", False))
     traza: list[dict] = []
     common = dict(db_path=db_path, use_router=use_router, synthesize_answer=synthesize_answer,
                   max_attempts=max_attempts, attempt_check=attempt_check, modo_contexto="harness",

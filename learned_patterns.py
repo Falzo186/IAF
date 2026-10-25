@@ -17,7 +17,7 @@ from pathlib import Path
 
 import config
 
-LOGGED_SOURCES = ("llm", "llm_anclada")
+LOGGED_SOURCES = ("llm", "llm_anclada", "llm_ejemplos", "llm_grande")
 
 
 @lru_cache(maxsize=4)
@@ -39,6 +39,14 @@ def db_hash(db_path: Path | None = None) -> str:
         return "desconocido"
 
 
+def _net_mode() -> str:
+    try:
+        import netmode
+        return netmode.get_mode()
+    except Exception:  # noqa: BLE001
+        return "offline"
+
+
 def log_pattern(result, path: Path | None = None, db_path: Path | None = None) -> bool:
     """Anota el resultado si cumple la condición. Devuelve True si escribió. Nunca lanza."""
     try:
@@ -51,6 +59,9 @@ def log_pattern(result, path: Path | None = None, db_path: Path | None = None) -
             "sql": result.sql,
             "modelo": result.model,
             "fuente": result.source,
+            "modo_contexto": getattr(result, "modo_contexto", "base"),
+            "modo_red": _net_mode(),
+            "ejemplos": [e.get("id") for e in getattr(result, "ejemplos", [])],
             "timestamp": datetime.now().isoformat(timespec="seconds"),
             "db_hash": db_hash(db_path),
         }

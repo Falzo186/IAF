@@ -22,5 +22,6 @@ if not config.DB_PATH.is_file():
 pages = [
     st.Page("views/dashboard.py", title="Dashboard", icon=":material/monitoring:", default=True),
     st.Page("views/asistente.py", title="Asistente", icon=":material/forum:"),
+    st.Page("views/comparativa_fase11.py", title="Comparativa Fase 11", icon=":material/compare_arrows:"),
 ]
 st.navigation(pages, position="top").run()
