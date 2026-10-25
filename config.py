@@ -47,3 +47,22 @@ LOGS_DIR = BASE_DIR / "logs"
 
 # --- Dominio -----------------------------------------------------------------
 ORDER_STATUS = {1: "Pendiente", 2: "En proceso", 3: "Rechazada", 4: "Completada"}
+
+# --- Fase 11: ejemplos resueltos, RAG, harness y modo de red -------------------------------
+CACHE_DIR = BASE_DIR / ".cache"                      # ignorado por git
+CATALOGO_PATH = BASE_DIR / "necesidades_negativas" / "catalogo.jsonl"
+FEWSHOT_K = 3                  # ejemplos recuperados por pregunta
+FEWSHOT_MAX_CHARS = 2400       # presupuesto de los ejemplos añadidos (modelos de 1-1.5B, num_ctx 4096)
+RAG_K = 3
+RAG_MIN_SCORE = 0.30           # coseno TF-IDF mínimo para inyectar un ejemplo recuperado
+MODOS_CONTEXTO = ("base", "fewshot", "rag", "harness")
+
+# Modo de red: "offline" (por defecto) no abre ningún socket hacia fuera; solo Ollama en localhost.
+# "online" permite el puente opcional a un modelo grande de capa gratuita (bridge.py, cost_guard.py).
+MODO_RED = os.getenv("IAF_MODO_RED", "offline").strip().lower() or "offline"
+BRIDGE_ENABLED = os.getenv("IAF_BRIDGE_ENABLED", "") == "1"   # desactivado por defecto
+BRIDGE_PROVIDERS_PATH = BASE_DIR / "bridge_providers.yaml"
+BRIDGE_MAX_PER_MINUTE = 5      # tope local, por debajo de cualquier límite gratuito
+BRIDGE_MAX_PER_DAY = 100
+BRIDGE_TIMEOUT_S = 20.0
+BRIDGE_MAX_RETRIES = 3

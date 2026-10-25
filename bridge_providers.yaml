@@ -1,0 +1,73 @@
+# Allowlist de proveedores de modelos grandes para el puente opcional (fase 11).
+#
+# REGLA DE COSTO: solo capas gratuitas sin pago. Un proveedor que no esté aquí, que tenga
+# `enabled: false`, o cuyo modelo no esté en `modelos_gratuitos` es RECHAZADO por cost_guard.py.
+# Si no se puede verificar que un proveedor es gratuito, se deja deshabilitado.
+#
+# Los nombres de modelo y los límites cambian: revísalos en la fuente antes de usarlos y actualiza
+# `verificado_el`. La llave va en la variable de entorno `api_key_env` (o en .env, que git ignora),
+# nunca en este archivo.
+
+proveedores:
+  gemini:
+    enabled: true
+    descripcion: Google AI Studio / Gemini API, capa gratuita (API compatible con OpenAI)
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    api_key_env: GEMINI_API_KEY
+    key_prefix: "AIza"
+    # Modelos listados como "Free of charge" (entrada y salida) en la tabla de precios.
+    modelos_gratuitos: ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
+    verificado_el: "2026-10-25"
+    fuentes:
+      - https://ai.google.dev/gemini-api/docs/pricing
+      - https://ai.google.dev/gemini-api/docs/billing
+      - https://ai.google.dev/gemini-api/docs/openai
+    nota: >
+      La tabla de precios lista el nivel gratuito ("Free of charge"); pasar al nivel de pago exige
+      enlazar una cuenta de facturación y prepagar, así que sin eso no hay cobros. La documentación
+      consultada no afirma que el nivel gratuito no pida tarjeta: se asume por ese diseño, y el
+      guardián de costo igualmente limita las peticiones.
+
+  openrouter:
+    enabled: false     # deshabilitado: la doc consultada no aclara si exige tarjeta o créditos
+    descripcion: OpenRouter, solo modelos con sufijo ":free"
+    base_url: https://openrouter.ai/api/v1/
+    api_key_env: OPENROUTER_API_KEY
+    key_prefix: "sk-or-"
+    require_model_suffix: ":free"
+    modelos_gratuitos: []
+    verificado_el: "2026-10-25"
+    fuentes:
+      - https://openrouter.ai/docs/api-reference/limits
+    nota: >
+      La doc fija límites para modelos ":free" (20 peticiones/min; 50/día con menos de 10 créditos
+      comprados), pero no dice si hace falta tarjeta. Habilítalo solo si lo verificas tú.
+
+  groq:
+    enabled: false     # deshabilitado: no se pudo verificar un plan gratuito en la documentación
+    descripcion: Groq (API compatible con OpenAI)
+    base_url: https://api.groq.com/openai/v1/
+    api_key_env: GROQ_API_KEY
+    key_prefix: "gsk_"
+    modelos_gratuitos: []
+    verificado_el: "2026-10-25"
+    fuentes:
+      - https://console.groq.com/docs/rate-limits
+    nota: >
+      La página de límites solo describe el plan "Developer" y la de precios no se pudo leer; sin
+      confirmación de gratuidad queda deshabilitado.
+
+  ollama:
+    enabled: true
+    descripcion: Ollama local (no sale de la máquina)
+    base_url: http://127.0.0.1:11434/v1/
+    api_key_env: ""
+    key_prefix: ""
+    local: true
+    modelos_gratuitos: ["qwen2.5:1.5b", "llama3.2:1b", "deepseek-r1:1.5b"]
+    verificado_el: "2026-10-25"
+    fuentes: []
+    nota: Solo los tres modelos permitidos del proyecto.
+
+# Llaves que NUNCA se aceptan, sea cual sea el proveedor (parecen de facturación o de proveedores de pago).
+llaves_prohibidas: ["sk-ant-", "sk-proj-", "sk_live", "pk_live", "rk_live", "sk-svcacct-"]

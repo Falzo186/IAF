@@ -79,6 +79,12 @@ class QueryResult:
     reference_id: str | None = None
     reference_match: bool | None = None
     judge_model: str | None = None
+    # Fase 11: contexto usado ("base" = el de siempre), ejemplos recuperados [{id, pregunta, score,
+    # origen}], traza de etapas del harness y modo de red con que se resolvió.
+    modo_contexto: str = "base"
+    ejemplos: list = field(default_factory=list)
+    traza: list = field(default_factory=list)
+    modo_red: str = "offline"
 
 
 def _intento(numero: int, sql: str | None, exito: bool | None, segundos: float,
@@ -319,11 +325,20 @@ def get_schema_context_level(level: str = "actual", db_path: Path = config.DB_PA
     raise ValueError(f"context_level desconocido: {level!r} (opciones: {', '.join(CONTEXT_LEVELS)})")
 
 
-def build_system_prompt(db_path: Path = config.DB_PATH, context_level: str = "actual") -> str:
+def build_system_prompt(db_path: Path = config.DB_PATH, context_level: str = "actual",
+                        prompt_extra: dict | None = None) -> str:
+    """Prompt de sistema. `prompt_extra` (fase 11, opcional) puede traer "schema" (esquema recortado)
+    y "examples" (ejemplos recuperados, que se añaden DESPUÉS de FEW_SHOTS). Sin él, el prompt es
+    exactamente el de siempre."""
     schema, ref_date, _ = _schema_context_cached(str(Path(db_path).resolve()))
     if context_level != "actual":
         schema = get_schema_context_level(context_level, db_path)
+    extra = prompt_extra or {}
+    if extra.get("schema"):
+        schema = extra["schema"]
     examples = "\n\n".join(f"Pregunta: {q}\n```sql\n{sql}\n```" for q, sql in FEW_SHOTS)
+    if extra.get("examples"):
+        examples = examples + "\n\n" + extra["examples"]
     return SYSTEM_PROMPT_TEMPLATE.format(schema=schema, reference_date=ref_date, examples=examples)
 
 
@@ -355,8 +370,8 @@ def _history_messages(history: list[dict] | None) -> list[dict]:
 
 
 def build_sql_messages(question: str, history: list[dict] | None = None,
-                       db_path: Path = config.DB_PATH) -> list[dict]:
-    return ([{"role": "system", "content": build_system_prompt(db_path)}]
+                       db_path: Path = config.DB_PATH, prompt_extra: dict | None = None) -> list[dict]:
+    return ([{"role": "system", "content": build_system_prompt(db_path, prompt_extra=prompt_extra)}]
             + _history_messages(history)
             + [{"role": "user", "content": question}])
 
@@ -884,7 +899,9 @@ def answer_question(question: str, model: str, history: list[dict] | None = None
                     llm: LLM | None = None, *, db_path: Path = config.DB_PATH,
                     use_router: bool = True, synthesize_answer: bool = True,
                     verified_synthesis: bool | None = None, max_attempts: int | None = None,
-                    attempt_check: AttemptCheck | None = None) -> QueryResult:
+                    attempt_check: AttemptCheck | None = None, modo_contexto: str = "base",
+                    contexto_opts: dict | None = None, sql_check: Callable | None = None,
+                    sql_options: dict | None = None, _desde_harness: bool = False) -> QueryResult:
     """Responde una pregunta en español. Nunca lanza excepciones: los errores van en QueryResult.error.
 
     verified_synthesis: si la ruta es "verificada", ¿redacta la respuesta el LLM? Con False
@@ -896,7 +913,18 @@ def answer_question(question: str, model: str, history: list[dict] | None = None
     (corte en el primer acierto); si no, el feedback, que nunca debe contener valores de la
     referencia, se envía al siguiente intento. Sin attempt_check (producción) solo se reintenta
     cuando la SQL falla, con el mensaje de error, como siempre.
+
+    modo_contexto (fase 11, opt-in): "base" (por defecto) = el prompt de siempre; "fewshot" añade
+    ejemplos resueltos parecidos; "rag" añade ejemplos sobre un umbral y recorta el esquema; "harness"
+    delega en harness.run (recuperación + validación estática + reparación + escalamiento opcional).
+    contexto_opts: k, exclude_ids, exclude_questions, exclude_sql, exclude_need, fewshot_modo...
+    sql_check(sql) -> mensaje de error o None: validación estática previa a la ejecución.
     """
+    if modo_contexto == "harness" and not _desde_harness:
+        import harness
+        return harness.run(question, model, history, llm, db_path=db_path, use_router=use_router,
+                           synthesize_answer=synthesize_answer, max_attempts=max_attempts,
+                           attempt_check=attempt_check, contexto_opts=contexto_opts)
     if verified_synthesis is None:
         verified_synthesis = config.VERIFIED_SYNTHESIS
     result = QueryResult(question=question, model=model)
@@ -924,10 +952,19 @@ def answer_question(question: str, model: str, history: list[dict] | None = None
                 result.source, result.business_query_id = "llm_anclada", bq.id
                 result.unsupported_filters = unsupported
                 anchor = (bq, render_sql(bq, **params))
+            prompt_extra = None
+            if modo_contexto != "base":
+                import context_modes
+                prompt_extra, result.ejemplos, etapa = context_modes.prepare(
+                    question, modo_contexto, contexto_opts, db_path)
+                result.modo_contexto = modo_contexto
+                result.traza.append(etapa)
+                if result.ejemplos and result.source == "llm":
+                    result.source = "llm_ejemplos"
             # El historial solo acompaña a las preguntas de seguimiento (ver is_follow_up).
             _generate_and_run(result, question, history if is_follow_up(question) else None,
                               llm, db_path, anchor, max_attempts or config.MAX_ATTEMPTS,
-                              attempt_check)
+                              attempt_check, prompt_extra, sql_check, sql_options)
             if result.error:
                 return result
 
@@ -969,8 +1006,11 @@ RETRY_RESULT_TEMPLATE = (
 
 def _generate_and_run(result: QueryResult, question: str, history: list[dict] | None,
                       llm: LLM, db_path: Path, anchor: tuple | None = None,
-                      max_attempts: int = 2, attempt_check: AttemptCheck | None = None) -> None:
-    messages = build_sql_messages(question, history, db_path)
+                      max_attempts: int = 2, attempt_check: AttemptCheck | None = None,
+                      prompt_extra: dict | None = None, sql_check: Callable | None = None,
+                      sql_options: dict | None = None) -> None:
+    messages = build_sql_messages(question, history, db_path, prompt_extra)
+    options = sql_options or SQL_OPTIONS
     if anchor is not None:
         bq, ref_sql = anchor
         messages[0] = {"role": "system", "content": messages[0]["content"]
@@ -981,7 +1021,7 @@ def _generate_and_run(result: QueryResult, question: str, history: list[dict] | 
         result.attempts = attempt
         t0 = time.perf_counter()
         try:
-            raw = llm(result.model, messages, **SQL_OPTIONS)
+            raw = llm(result.model, messages, **options)
         except Exception as exc:
             result.timings["sql_gen"] += time.perf_counter() - t0
             result.intentos.append(_intento(attempt, None, False, time.perf_counter() - t0,
@@ -997,6 +1037,9 @@ def _generate_and_run(result: QueryResult, question: str, history: list[dict] | 
         log = {"intento": attempt, "sql": sql or None, "ejecuto": False, "error": None}
         result.attempt_log.append(log)
         try:
+            static_error = sql_check(sql) if (sql_check and sql) else None
+            if static_error:      # validación estática del harness: se trata como error de validación
+                raise SQLValidationError(static_error)
             result.sql, result.df, exec_t = _run_sql(sql, db_path)
             result.timings["exec"] += exec_t
             result.error = last_error = None
@@ -1070,7 +1113,8 @@ JUDGE_RETRY_TEMPLATE = (
 def answer_with_judge(pregunta: str, modelo: str, modelo_juez: str | None = None,
                       referencia: Referencia | None = None, max_intentos: int = 3, *,
                       history: list[dict] | None = None, llm: LLM | None = None,
-                      judge_llm: LLM | None = None, db_path: Path = config.DB_PATH) -> QueryResult:
+                      judge_llm: LLM | None = None, db_path: Path = config.DB_PATH,
+                      modo_contexto: str = "base", contexto_opts: dict | None = None) -> QueryResult:
     """Responde con hasta max_intentos, criticando cada intento con un juez-LLM.
 
     El modelo genera SQL solo con el esquema (sin enrutador ni consultas de referencia). El juez es
@@ -1103,7 +1147,15 @@ def answer_with_judge(pregunta: str, modelo: str, modelo_juez: str | None = None
     criterio = "comparador" if check else "sin_referencia"
     runs = []   # (sql, df, error) de cada intento
     try:
-        messages = build_sql_messages(pregunta, history if is_follow_up(pregunta) else None, db_path)
+        prompt_extra = None
+        if modo_contexto != "base":
+            import context_modes
+            prompt_extra, result.ejemplos, etapa = context_modes.prepare(
+                pregunta, modo_contexto, contexto_opts, db_path)
+            result.modo_contexto = modo_contexto
+            result.traza.append(etapa)
+        messages = build_sql_messages(pregunta, history if is_follow_up(pregunta) else None, db_path,
+                                      prompt_extra)
         for n in range(1, max(1, max_intentos) + 1):
             result.attempts = n
             t0 = time.perf_counter()
