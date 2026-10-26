@@ -109,6 +109,19 @@ configuración por defecto (`VERIFIED_SYNTHESIS = False`) una respuesta verifica
 **Modelo por defecto: `qwen2.5:1.5b`**, el más preciso y el más rápido. Detalle,
 fallos por modelo y la iteración del prompt en [fase2.md](fase2.md).
 
+## Fase 11: ejemplos resueltos, RAG, harness y modo de red
+
+Todo es opt-in; el Asistente arranca igual que antes (contexto **Base**, red **Local offline**).
+En *Configuración avanzada* se elige el **modo de contexto** (Base, Few shot, RAG, Harness) y el
+**modo de red** (Local offline u Online gratis). El modo offline no abre ninguna conexión hacia fuera
+(solo Ollama en localhost); el online solo habilita un puente opcional a un modelo grande de capa gratuita,
+protegido por un guardián de costo, y nunca es requisito. Las respuestas con ejemplos llevan la etiqueta
+*IA + ejemplos* y muestran qué ejemplos se recuperaron.
+
+- Catálogo de 138 "necesidades negativas" (variantes resueltas y validadas de N1-N10): `necesidades_negativas/`.
+- Resultados Base | Few shot | RAG | Harness: página *Comparativa Fase 11* y `eval/fase11/`.
+- Cómo reproducirlo en Windows, qué funcionó y qué no, proveedores gratuitos verificados: [fase11.md](fase11.md).
+
 ## Arquitectura
 
 ```
@@ -163,12 +176,15 @@ analytics.py                            KPIs, tendencia, insights (dashboard)
 app.py · views/ · ui/ · assets/ · .streamlit/   interfaz Streamlit
 eval_text2sql.py · eval/                evaluación de modelos
 tests/                                  pytest (todas las fases)
+fewshot.py · rag.py · harness.py        fase 11: ejemplos, recuperación y pipeline
+netmode.py · cost_guard.py · bridge.py  fase 11: modo de red, costo cero y puente opcional
+necesidades_negativas/ · scripts/       fase 11: catálogo y herramientas
 tools/                                  capturas y medición de la interfaz
 data/bike_stores/                       los 9 CSV
 docs/capturas/                          capturas de pantalla
 demo/                                   preguntas validadas, cifras clave y video de respaldo
 warmup.py                               precalentamiento del modelo (lo lanza el arranque)
-fase1.md … fase5.md                     documentación de cada fase
+fase1.md … fase11.md                    documentación de cada fase
 ```
 
 Desarrollo: `pip install -r requirements-dev.txt` y `pytest -q`.
