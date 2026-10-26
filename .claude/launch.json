@@ -4,8 +4,32 @@
     {
       "name": "asistente-fase9",
       "runtimeExecutable": "C:/Users/alexp/AppData/Local/Python/pythoncore-3.14-64/python.exe",
-      "runtimeArgs": ["-m", "streamlit", "run", "app.py", "--server.port", "8599", "--server.headless", "true"],
+      "runtimeArgs": [
+        "-m",
+        "streamlit",
+        "run",
+        "app.py",
+        "--server.port",
+        "8599",
+        "--server.headless",
+        "true"
+      ],
       "port": 8599
+    },
+    {
+      "name": "asistente-fase11",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "streamlit",
+        "run",
+        "app.py",
+        "--server.port",
+        "8611",
+        "--server.headless",
+        "true"
+      ],
+      "port": 8611
     }
   ]
 }

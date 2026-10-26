@@ -261,6 +261,38 @@ def comparative_table(results: list[dict], modelos: list[str], politica: str = "
     return out
 
 
+def sign_test_p(wins: int, losses: int) -> float:
+    """p bilateral exacta de la prueba de los signos (binomial 0.5) sobre los pares que cambiaron."""
+    from math import comb
+    n = wins + losses
+    if n == 0:
+        return 1.0
+    tail = sum(comb(n, k) for k in range(0, min(wins, losses) + 1)) / 2 ** n
+    return min(1.0, 2 * tail)
+
+
+def paired_table(results: list[dict], modelos: list[str], politica: str = "sin_gemelas") -> list[str]:
+    """Ítem por ítem frente a Base: cuántos pasaron de mal a bien (mejora) y de bien a mal (empeora)."""
+    out = ["| Modelo | Conjunto | Modo | Mejoran | Empeoran | Igual | p (prueba de los signos) |",
+           "|---|---|---|---:|---:|---:|---:|"]
+    for model in modelos:
+        for conjunto in CONJUNTOS:
+            base = {r["id"]: r["ok"] for r in pick(results, modelo=model, modo="base", conjunto=conjunto)}
+            if not base:
+                continue
+            for modo in ("fewshot", "rag", "harness", "harness_router"):
+                other = {r["id"]: r["ok"] for r in pick(results, modelo=model, modo=modo, conjunto=conjunto,
+                                                          politica=politica)}
+                if not other:
+                    continue
+                ids = base.keys() & other.keys()
+                wins = sum(other[i] and not base[i] for i in ids)
+                losses = sum(base[i] and not other[i] for i in ids)
+                out.append(f"| {model} | {conjunto} | {MODO_NOMBRE[modo]} | {wins} | {losses} "
+                           f"| {len(ids) - wins - losses} | {sign_test_p(wins, losses):.3f} |")
+    return out
+
+
 def build_markdown(results: list[dict], meta: dict) -> str:
     modelos = list(dict.fromkeys(r["modelo"] for r in results))
     banner = ["> **SIMULADO**: el LLM es la SQL de referencia; estas cifras son una prueba de humo, no resultados.", ""] if meta.get("simulado") else []
@@ -296,20 +328,25 @@ def build_markdown(results: list[dict], meta: dict) -> str:
 
     out += ["", "## Vistas vs no vistas", "",
             "*Vistas*: preguntas de una necesidad cuyos hermanos están en el catálogo (golden N1-N10 y todo el heldout). "
-            "*No vistas*: golden básico y anclada (el catálogo no tiene su tipo) y cualquier ítem bajo la política estricta.", "",
-            "| Modelo | Modo | Golden negocio (vistas) | Golden básico+anclada (no vistas) | Heldout (vistas) | Heldout estricto (no vistas) |",
+            "*No vistas*: golden básico y anclada (el catálogo no tiene su tipo) y cualquier ítem bajo la política estricta. "
+            "Se muestran las tres políticas de ejemplos: con `permisivo` puede aparecer un hermano con la misma SQL.", "",
+            "| Modelo | Modo | Política | Golden negocio (vistas) | Golden básico+anclada (no vistas) | Heldout (vistas) |",
             "|---|---|---|---|---|---|"]
     for model in modelos:
         for modo in ("base", "fewshot", "rag", "harness"):
-            pol = "n/a" if modo == "base" else "sin_gemelas"
-            base_rows = pick(results, modelo=model, modo=modo, politica=pol)
-            if not base_rows:
-                continue
-            strict = pick(results, modelo=model, modo=modo, politica="estricto", conjunto="negativas_heldout") if modo != "base" else \
-                pick(results, modelo=model, modo="base", conjunto="negativas_heldout")
-            out.append(f"| {model} | {MODO_NOMBRE[modo]} | {cell([r for r in base_rows if r['conjunto'] == 'golden' and r['tipo'] == 'negocio'])} "
-                       f"| {cell([r for r in base_rows if r['conjunto'] == 'golden' and r['tipo'] in SPLIT_SIN_HERMANOS])} "
-                       f"| {cell([r for r in base_rows if r['conjunto'] == 'negativas_heldout'])} | {cell(strict)} |")
+            for pol in (["n/a"] if modo == "base" else list(POLITICAS)):
+                rows = pick(results, modelo=model, modo=modo, politica=pol)
+                if not rows:
+                    continue
+                out.append(f"| {model} | {MODO_NOMBRE[modo]} | {pol} "
+                           f"| {cell([r for r in rows if r['conjunto'] == 'golden' and r['tipo'] == 'negocio'])} "
+                           f"| {cell([r for r in rows if r['conjunto'] == 'golden' and r['tipo'] in SPLIT_SIN_HERMANOS])} "
+                           f"| {cell([r for r in rows if r['conjunto'] == 'negativas_heldout'])} |")
+
+    out += ["", "## Comparación pareada frente a Base (política oficial)", "",
+            "Con pocos ítems (24 y 45) una diferencia de uno o dos aciertos es ruido: la prueba de los signos "
+            "mira solo los ítems que cambiaron de resultado. p < 0.05 sugiere que el cambio no es azar.", "",
+            *paired_table(results, modelos), ""]
 
     out += ["", "## Heldout por tipo de variante (política oficial)", "",
             "| Modelo | Modo | " + " | ".join(catalogo.TIPOS) + " |", "|---|---|" + "---|" * len(catalogo.TIPOS)]
@@ -363,7 +400,7 @@ def make_chart(results: list[dict], path: Path, simulado: bool = False) -> bool:
     colors = {"base": "#9DB7D5", "fewshot": "#F4A259", "rag": "#3C74A6", "harness": "#D9531E"}
     fig, axes = plt.subplots(1, 2, figsize=(13, 5.2), sharey=True)
     for ax, (conjunto, titulo) in zip(axes, (("golden", "Golden (24, leave-one-out)"),
-                                              ("negativas_heldout", "Heldout (variantes no vistas)"))):
+                                              ("negativas_heldout", "Heldout (variantes reservadas)"))):
         width = 0.2
         for j, modo in enumerate(modos):
             vals = []
@@ -459,7 +496,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--salida", type=Path, default=OUT_DIR)
     ap.add_argument("--simulado", action="store_true", help="LLM = SQL de referencia (solo prueba de humo)")
     ap.add_argument("--fresh", action="store_true", help="no reanudar resultados previos de --salida")
+    ap.add_argument("--solo-reporte", action="store_true",
+                    help="regenera tabla, CSV y gráfica desde --salida/resultados.json sin correr nada")
     args = ap.parse_args(argv)
+
+    if args.solo_reporte:
+        data = json.loads((args.salida / "resultados.json").read_text(encoding="utf-8"))
+        write_outputs(data["resultados"], data["meta"], args.salida)
+        print(f"Reporte regenerado en {args.salida}")
+        return 0
 
     netmode.set_mode(args.red)
     items_by_set = {}
